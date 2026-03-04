@@ -14,7 +14,9 @@ const extensionConfig = {
   },
   devtool: 'source-map',
   externals: {
-    vscode: 'commonjs vscode'
+    vscode: 'commonjs vscode',
+    'pdf-parse': 'commonjs pdf-parse',
+    'mammoth': 'commonjs mammoth'
   },
   resolve: {
     extensions: ['.ts', '.js']
