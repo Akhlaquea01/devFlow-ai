@@ -1,0 +1,111 @@
+{
+  "name": "devflow-ai",
+  "displayName": "DevFlow AI",
+  "description": "Generate structured development prompts (PRD, TDS, DIG, DEV) from requirements",
+  "version": "0.1.0",
+  "publisher": "your-publisher-id",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devflow.startWorkflow",
+        "title": "DevFlow: Start Workflow",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "devflow.analyzeCodebase",
+        "title": "DevFlow: Analyze Codebase",
+        "icon": "$(search)"
+      },
+      {
+        "command": "devflow.openChat",
+        "title": "DevFlow: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "devflow.showHelp",
+        "title": "DevFlow: Show Help",
+        "icon": "$(question)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devflow-sidebar",
+          "title": "DevFlow AI",
+          "icon": "resources/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "devflow-sidebar": [
+        {
+          "icon": "resources/sidebar-icon.svg",
+          "type": "webview",
+          "id": "devflow.sidebarView",
+          "name": "DevFlow"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DevFlow AI",
+      "properties": {
+        "devflow.defaultScope": {
+          "type": "string",
+          "default": "fullstack",
+          "enum": [
+            "ui",
+            "backend",
+            "fullstack",
+            "testing",
+            "infrastructure"
+          ],
+          "description": "Default implementation scope"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "devflow.startWorkflow",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "build:dev": "webpack",
+    "build:prod": "webpack --mode production --devtool hidden-source-map",
+    "vsix": "npx vsce package",
+    "release:patch": "npm version patch && npm run vsix",
+    "release:minor": "npm version minor && npm run vsix",
+    "release:major": "npm version major && npm run vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.35",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vscode/vsce": "^2.27.0",
+    "eslint": "^8.57.1",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^5.1.4"
+  }
+}
