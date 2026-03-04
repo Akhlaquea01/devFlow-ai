@@ -1,3 +1,4 @@
+import './polyfills';
 import * as vscode from 'vscode';
 import { SidebarProvider } from './providers/sidebarProvider';
 import { CodebaseAnalyzer } from './services/codebaseAnalyzer';
