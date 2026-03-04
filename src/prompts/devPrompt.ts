@@ -1,7 +1,8 @@
-export function buildDevPrompt(digPath: string, codebaseContext: string): string {
+export function buildDevPrompt(digContent: string, codebaseContext: string): string {
     return `You are a **Senior Full-Stack Developer** acting as my pair programmer. Help me implement the code following the attached Development Implementation Guide (DIG).
 
-@${digPath}
+**DIG Content**:
+${digContent}
 
 **Codebase Context**:
 ${codebaseContext}

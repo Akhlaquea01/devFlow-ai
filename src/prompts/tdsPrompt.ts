@@ -1,7 +1,8 @@
-export function buildTdsPrompt(prdPath: string, codebaseContext: string): string {
+export function buildTdsPrompt(prdContent: string, codebaseContext: string): string {
   return `You are a **Senior Software Architect** acting as my peer collaborator. Create a detailed Technical Design Specification based on the attached PRD.
 
-@${prdPath}
+**PRD Content**:
+${prdContent}
 
 **Codebase Context**:
 ${codebaseContext}

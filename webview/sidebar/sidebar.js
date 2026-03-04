@@ -1,40 +1,54 @@
 (function () {
   const vscode = acquireVsCodeApi();
 
-  const startBtn = document.getElementById('start-btn');
+  // Step 1: PRD
+  const generatePrdBtn = document.getElementById('generate-prd-btn');
   const inputSource = document.getElementById('input-source');
   const requirementInput = document.getElementById('requirement-input');
-  const progressSection = document.getElementById('progress-section');
-  const outputSection = document.getElementById('output-section');
-  const progressFill = document.getElementById('progress-fill');
-  const stepList = document.getElementById('step-list');
-  const outputContent = document.getElementById('output-content');
-  const copyBtn = document.getElementById('copy-btn');
-  const openBtn = document.getElementById('open-btn');
   const attachFilesBtn = document.getElementById('attach-files-btn');
   const attachedFilesList = document.getElementById('attached-files-list');
   const imageUrlInput = document.getElementById('image-url-input');
 
-  let activeTab = 'prd';
+  // Step 2: TDS
+  const generateTdsBtn = document.getElementById('generate-tds-btn');
+  const selectPrdBtn = document.getElementById('select-prd-btn');
+  const prdFileInput = document.getElementById('prd-file-input');
+  const step2Status = document.getElementById('step2-status');
+
+  // Step 3: DIG
+  const generateDigBtn = document.getElementById('generate-dig-btn');
+  const selectTdsBtn = document.getElementById('select-tds-btn');
+  const tdsFileInput = document.getElementById('tds-file-input');
+  const step3Status = document.getElementById('step3-status');
+
+  // Step 4: DEV
+  const generateDevBtn = document.getElementById('generate-dev-btn');
+  const selectDigBtn = document.getElementById('select-dig-btn');
+  const digFileInput = document.getElementById('dig-file-input');
+  const step4Status = document.getElementById('step4-status');
+
+  // Global
+  const globalStatus = document.getElementById('global-status');
+
   let attachedFiles = [];
+  let currentFileSelectionTarget = null; // 'prd', 'tds', 'dig', or 'context'
 
-  const WORKFLOW_STEPS = [
-    'Parsing Requirement',
-    'Analyzing Codebase',
-    'Generating PRD Prompt',
-    'Generating TDS Prompt',
-    'Generating DIG Prompt',
-    'Generating DEV Prompt',
-    'Ready for Copy/Paste',
-  ];
+  // ==========================================
+  // Global Helpers
+  // ==========================================
+  function showGlobalStatus(message, isError = false) {
+    globalStatus.style.display = 'block';
+    globalStatus.innerText = message;
+    globalStatus.style.color = isError ? 'var(--vscode-errorForeground)' : 'var(--vscode-notificationsInfoIcon-foreground)';
+  }
 
+  // ==========================================
+  // Step 1 Logic (PRD)
+  // ==========================================
   inputSource.addEventListener('change', () => {
     switch (inputSource.value) {
       case 'jira':
         requirementInput.placeholder = 'Enter Jira Ticket ID or URL...';
-        break;
-      case 'file':
-        requirementInput.placeholder = 'Enter absolute or workspace-relative file path...';
         break;
       case 'clipboard':
         requirementInput.placeholder = '(Will read from clipboard on submit)';
@@ -46,7 +60,8 @@
   });
 
   attachFilesBtn.addEventListener('click', () => {
-    vscode.postMessage({ command: 'selectFiles' });
+    currentFileSelectionTarget = 'context';
+    vscode.postMessage({ command: 'selectFiles', data: { multiple: true } });
   });
 
   function renderAttachedFiles() {
@@ -72,31 +87,36 @@
     });
   }
 
-  startBtn.addEventListener('click', () => {
+  generatePrdBtn.addEventListener('click', () => {
     const requirement = requirementInput.value.trim();
-    if (!requirement) {
-      if (inputSource.value === 'clipboard') {
-        navigator.clipboard.readText().then(text => {
-          requirementInput.value = text;
-          startWorkflow(text);
-        }).catch(err => {
-          vscode.postMessage({ command: 'error', data: { message: 'Failed to read clipboard' } });
-        });
-      } else {
-        vscode.postMessage({ command: 'error', data: { message: 'Requirement input is empty' } });
-      }
+    if (!requirement && inputSource.value !== 'clipboard') {
+      showGlobalStatus('Requirement input is empty', true);
+      return;
+    }
+
+    if (!requirement && inputSource.value === 'clipboard') {
+      navigator.clipboard.readText().then(text => {
+        requirementInput.value = text;
+        triggerGeneratePrd(text);
+      }).catch(err => {
+        showGlobalStatus('Failed to read clipboard', true);
+      });
     } else {
-      startWorkflow(requirement);
+      triggerGeneratePrd(requirement);
     }
   });
 
-  function startWorkflow(requirement) {
+  function triggerGeneratePrd(requirement) {
     const scopeRadio = document.querySelector('input[name="scope"]:checked');
     const scope = scopeRadio ? scopeRadio.value : 'fullstack';
     const imageUrls = imageUrlInput.value.trim() ? imageUrlInput.value.split(',').map(url => url.trim()).filter(url => url.length > 0) : [];
 
+    generatePrdBtn.disabled = true;
+    generatePrdBtn.textContent = '⏳ Generating PRD...';
+    showGlobalStatus('Parsing requirements and analyzing codebase...');
+
     vscode.postMessage({
-      command: 'startWorkflow',
+      command: 'generatePrd',
       data: {
         source: inputSource.value,
         requirement,
@@ -105,75 +125,134 @@
         imageUrls
       },
     });
-
-    startBtn.disabled = true;
-    startBtn.textContent = '⏳ Generating...';
-    progressSection.classList.remove('hidden');
-    renderSteps(-1);
   }
 
-  document.querySelectorAll('.tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeTab = tab.dataset.tab;
-      vscode.postMessage({ command: 'switchTab', data: { tab: activeTab } });
+  // ==========================================
+  // Step 2 Logic (TDS)
+  // ==========================================
+  selectPrdBtn.addEventListener('click', () => {
+    currentFileSelectionTarget = 'prd';
+    vscode.postMessage({ command: 'selectFiles', data: { multiple: false, filters: { 'Markdown': ['md'] } } });
+  });
+
+  generateTdsBtn.addEventListener('click', () => {
+    if (!prdFileInput.value) return;
+    generateTdsBtn.disabled = true;
+    generateTdsBtn.textContent = '⏳ Generating TDS...';
+    showGlobalStatus('Generating TDS prompt based on PRD...');
+
+    vscode.postMessage({
+      command: 'generateTds',
+      data: { prdPath: prdFileInput.value }
     });
   });
 
-  copyBtn.addEventListener('click', () => {
-    vscode.postMessage({ command: 'copyPrompt', data: { fileType: activeTab } });
+  // ==========================================
+  // Step 3 Logic (DIG)
+  // ==========================================
+  selectTdsBtn.addEventListener('click', () => {
+    currentFileSelectionTarget = 'tds';
+    vscode.postMessage({ command: 'selectFiles', data: { multiple: false, filters: { 'Markdown': ['md'] } } });
   });
 
-  openBtn.addEventListener('click', () => {
-    vscode.postMessage({ command: 'openPromptFile', data: { fileType: activeTab } });
-  });
+  generateDigBtn.addEventListener('click', () => {
+    if (!prdFileInput.value || !tdsFileInput.value) return;
+    generateDigBtn.disabled = true;
+    generateDigBtn.textContent = '⏳ Generating DIG...';
+    showGlobalStatus('Generating DIG prompt based on TDS...');
 
-  function renderSteps(activeIndex) {
-    stepList.innerHTML = '';
-    WORKFLOW_STEPS.forEach((step, i) => {
-      const el = document.createElement('div');
-      let cls = 'step-pending';
-      if (i < activeIndex) {
-        cls = 'step-done';
-      }
-      if (i === activeIndex) {
-        cls = 'step-active';
-      }
-      el.className = `step-item ${cls}`;
-      el.innerHTML = `<span class="step-icon"></span><span>${step}</span>`;
-      stepList.appendChild(el);
+    vscode.postMessage({
+      command: 'generateDig',
+      data: { prdPath: prdFileInput.value, tdsPath: tdsFileInput.value }
     });
-    const clampedIndex = Math.max(0, activeIndex + 1);
-    progressFill.style.width = `${(clampedIndex / WORKFLOW_STEPS.length) * 100}%`;
-  }
+  });
 
+  // ==========================================
+  // Step 4 Logic (DEV)
+  // ==========================================
+  selectDigBtn.addEventListener('click', () => {
+    currentFileSelectionTarget = 'dig';
+    vscode.postMessage({ command: 'selectFiles', data: { multiple: false, filters: { 'Markdown': ['md'] } } });
+  });
+
+  generateDevBtn.addEventListener('click', () => {
+    if (!prdFileInput.value || !tdsFileInput.value || !digFileInput.value) return;
+    generateDevBtn.disabled = true;
+    generateDevBtn.textContent = '⏳ Generating DEV...';
+    showGlobalStatus('Generating DEV code prompt based on DIG...');
+
+    vscode.postMessage({
+      command: 'generateDev',
+      data: { prdPath: prdFileInput.value, tdsPath: tdsFileInput.value, digPath: digFileInput.value }
+    });
+  });
+
+  // ==========================================
+  // Message Handling
+  // ==========================================
   window.addEventListener('message', (event) => {
     const msg = event.data;
     switch (msg.command) {
-      case 'stepUpdate':
-        renderSteps(msg.data.stepIndex);
-        break;
-      case 'workflowComplete':
-        startBtn.disabled = false;
-        startBtn.textContent = '🚀 Generate Prompts';
-        outputSection.classList.remove('hidden');
-        outputContent.innerHTML = msg.data.html || '<p>Generation complete. Check tabs above.</p>';
-        break;
-      case 'tabContent':
-        outputContent.innerHTML = msg.data.html;
-        break;
-      case 'error':
-        startBtn.disabled = false;
-        startBtn.textContent = '🚀 Generate Prompts';
-        outputSection.classList.remove('hidden');
-        outputContent.innerHTML = `<p style="color:var(--vscode-errorForeground)">❌ ${msg.data.message}</p>`;
-        break;
       case 'filesSelected':
-        const newFiles = msg.data.filePaths.filter(f => !attachedFiles.includes(f));
-        attachedFiles = [...attachedFiles, ...newFiles];
-        renderAttachedFiles();
+        const filePaths = msg.data.filePaths;
+        if (!filePaths || filePaths.length === 0) return;
+
+        if (currentFileSelectionTarget === 'context') {
+          const newFiles = filePaths.filter(f => !attachedFiles.includes(f));
+          attachedFiles = [...attachedFiles, ...newFiles];
+          renderAttachedFiles();
+        } else if (currentFileSelectionTarget === 'prd') {
+          prdFileInput.value = filePaths[0];
+          generateTdsBtn.disabled = false;
+        } else if (currentFileSelectionTarget === 'tds') {
+          tdsFileInput.value = filePaths[0];
+          if (prdFileInput.value) generateDigBtn.disabled = false;
+        } else if (currentFileSelectionTarget === 'dig') {
+          digFileInput.value = filePaths[0];
+          if (prdFileInput.value && tdsFileInput.value) generateDevBtn.disabled = false;
+        }
         break;
+
+      case 'generationComplete':
+        showGlobalStatus(msg.data.message);
+        const { step, filePath } = msg.data;
+
+        if (step === 'prd') {
+          generatePrdBtn.disabled = false;
+          generatePrdBtn.textContent = '🚀 Generate PRD Prompt';
+          prdFileInput.value = filePath;
+          generateTdsBtn.disabled = false;
+          step2Status.innerText = '✅ PRD Generated';
+        } else if (step === 'tds') {
+          generateTdsBtn.disabled = false;
+          generateTdsBtn.textContent = '🚀 Generate TDS Prompt';
+          tdsFileInput.value = filePath;
+          generateDigBtn.disabled = false;
+          step3Status.innerText = '✅ TDS Generated';
+        } else if (step === 'dig') {
+          generateDigBtn.disabled = false;
+          generateDigBtn.textContent = '🚀 Generate DIG Prompt';
+          digFileInput.value = filePath;
+          generateDevBtn.disabled = false;
+          step4Status.innerText = '✅ DIG Generated';
+        } else if (step === 'dev') {
+          generateDevBtn.disabled = false;
+          generateDevBtn.textContent = '🚀 Generate DEV Prompt';
+        }
+        break;
+
+      case 'error':
+        showGlobalStatus(`❌ ${msg.data.message}`, true);
+        generatePrdBtn.disabled = false;
+        generatePrdBtn.textContent = '🚀 Generate PRD Prompt';
+        generateTdsBtn.disabled = false;
+        generateTdsBtn.textContent = '🚀 Generate TDS Prompt';
+        generateDigBtn.disabled = false;
+        generateDigBtn.textContent = '🚀 Generate DIG Prompt';
+        generateDevBtn.disabled = false;
+        generateDevBtn.textContent = '🚀 Generate DEV Prompt';
+        break;
+
       default:
         break;
     }

@@ -16,8 +16,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (msg) => {
       switch (msg.command) {
-        case 'startWorkflow':
-          vscode.commands.executeCommand('devflow.startWorkflow', msg.data);
+        case 'generatePrd':
+          vscode.commands.executeCommand('devflow.generatePrd', msg.data);
+          break;
+        case 'generateTds':
+          vscode.commands.executeCommand('devflow.generateTds', msg.data);
+          break;
+        case 'generateDig':
+          vscode.commands.executeCommand('devflow.generateDig', msg.data);
+          break;
+        case 'generateDev':
+          vscode.commands.executeCommand('devflow.generateDev', msg.data);
           break;
         case 'analyzeCodebase':
           vscode.commands.executeCommand('devflow.analyzeCodebase');
@@ -32,7 +41,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           vscode.commands.executeCommand('devflow.copyPrompt', msg.data);
           break;
         case 'selectFiles':
-          this.handleSelectFiles();
+          this.handleSelectFiles(msg?.data || {});
           break;
         default:
           break;
@@ -40,12 +49,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private async handleSelectFiles(): Promise<void> {
+  private async handleSelectFiles(options: any = {}): Promise<void> {
     const uris = await vscode.window.showOpenDialog({
-      canSelectMany: true,
+      canSelectMany: options.multiple !== false,
       openLabel: 'Attach to Context',
       canSelectFiles: true,
       canSelectFolders: false,
+      filters: options.filters || undefined
     });
 
     if (uris && uris.length > 0) {
@@ -76,22 +86,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="app">
-    <section class="panel" id="input-section">
-      <h3 class="panel-title">📥 Requirement Input</h3>
+    <!-- Step 1: PRD -->
+    <section class="panel" id="step1-section">
+      <h3 class="panel-title">1️⃣ Generate PRD Prompt</h3>
       <div class="input-group">
         <select id="input-source">
           <option value="text">Text / User Story</option>
           <option value="clipboard">Paste from Clipboard</option>
           <option value="jira">Jira Issue</option>
-          <option value="file">Local File</option>
         </select>
-        <textarea id="requirement-input" placeholder="Describe your requirement..." rows="6"></textarea>
+        <textarea id="requirement-input" placeholder="Describe your requirement..." rows="4"></textarea>
 
-        <div class="attachment-group" style="margin-top: 10px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Context Attachments:</label>
+        <div class="attachment-group" style="margin-top: 5px;">
           <input type="text" id="image-url-input" placeholder="Figma or Image URL (optional)" style="width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px;">
-          <button id="attach-files-btn" class="secondary-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">📎 Attach Files (.txt, .md, etc)</button>
-          <div id="attached-files-list" style="font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-bottom: 10px;"></div>
+          <button id="attach-files-btn" class="secondary-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">📎 Attach Context Files</button>
+          <div id="attached-files-list" style="font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-bottom: 5px;"></div>
         </div>
 
         <div class="scope-selector">
@@ -103,30 +112,52 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <label><input type="radio" name="scope" value="testing"> Testing</label>
           </div>
         </div>
-        <button id="start-btn" class="primary-btn">🚀 Generate Prompts</button>
+        <button id="generate-prd-btn" class="primary-btn">🚀 Generate PRD Prompt</button>
       </div>
     </section>
 
-    <section class="panel hidden" id="progress-section">
-      <h3 class="panel-title">📊 Generation Progress</h3>
-      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-      <div class="step-list" id="step-list"></div>
+    <!-- Step 2: TDS -->
+    <section class="panel" id="step2-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">2️⃣ Generate TDS Prompt <span id="step2-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+      <div class="input-group">
+        <label class="field-label">Select generated PRD file:</label>
+        <div style="display:flex; gap: 8px;">
+          <input type="text" id="prd-file-input" readonly placeholder="No PRD selected" style="flex:1">
+          <button id="select-prd-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Browse</button>
+        </div>
+        <button id="generate-tds-btn" class="primary-btn" disabled>🚀 Generate TDS Prompt</button>
+      </div>
     </section>
 
-    <section class="panel hidden" id="output-section">
-      <h3 class="panel-title">📋 Generated Prompts</h3>
-      <div class="tabs">
-        <button class="tab active" data-tab="prd">PRD</button>
-        <button class="tab" data-tab="tds">TDS</button>
-        <button class="tab" data-tab="dig">DIG</button>
-        <button class="tab" data-tab="dev">DEV</button>
-      </div>
-      <div class="tab-content" id="output-content"></div>
-      <div class="action-buttons" style="padding: 12px; display: flex; gap: 8px; border-top: 1px solid var(--border);">
-        <button id="copy-btn" class="primary-btn secondary" style="flex:1">📋 Copy</button>
-        <button id="open-btn" class="primary-btn secondary" style="flex:1">📄 Open File</button>
+    <!-- Step 3: DIG -->
+    <section class="panel" id="step3-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">3️⃣ Generate DIG Prompt <span id="step3-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+      <div class="input-group">
+        <label class="field-label">Select generated TDS file:</label>
+        <div style="display:flex; gap: 8px;">
+          <input type="text" id="tds-file-input" readonly placeholder="No TDS selected" style="flex:1">
+          <button id="select-tds-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Browse</button>
+        </div>
+        <button id="generate-dig-btn" class="primary-btn" disabled>🚀 Generate DIG Prompt</button>
       </div>
     </section>
+
+    <!-- Step 4: DEV -->
+    <section class="panel" id="step4-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">4️⃣ Generate DEV Prompt <span id="step4-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+      <div class="input-group">
+        <label class="field-label">Select generated DIG file:</label>
+        <div style="display:flex; gap: 8px;">
+          <input type="text" id="dig-file-input" readonly placeholder="No DIG selected" style="flex:1">
+          <button id="select-dig-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Browse</button>
+        </div>
+        <button id="generate-dev-btn" class="primary-btn" disabled>🚀 Generate DEV Prompt</button>
+      </div>
+    </section>
+
+    <!-- Output Status -->
+    <div id="global-status" style="margin-top: 10px; font-size: 13px; color: var(--vscode-notificationsInfoIcon-foreground); display: none; padding: 10px; background: var(--vscode-editorInfo-background); border-radius: 4px;">
+    </div>
   </div>
   <script src="${scriptUri}"></script>
 </body>

@@ -1,1 +1,4 @@
 node_modules
+.devflow-ai-0.1.0.vsix
+.vscode
+.devflow

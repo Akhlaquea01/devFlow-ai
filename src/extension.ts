@@ -24,9 +24,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('devflow.startWorkflow', async (data: any) => {
+    vscode.commands.registerCommand('devflow.generatePrd', async (data: any) => {
       try {
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 0 } });
         const requirement = await parser.parse(
           data.source,
           data.requirement,
@@ -34,52 +33,84 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           data.imageUrls || []
         );
 
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 1 } });
         const profile = await analyzer.analyze();
         const codebaseContext = analyzer.summarize(profile);
 
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 2 } });
         const prdPrompt = buildPrdPrompt(requirement.parsedContent, codebaseContext, data.scope);
         const prdFileUri = await saveOutput('PRD.md', prdPrompt);
         workflowOutputs.prd = prdPrompt;
         outputPaths.prd = prdFileUri.fsPath;
 
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 3 } });
-        const tdsPrompt = buildTdsPrompt(prdFileUri.fsPath, codebaseContext);
-        const tdsFileUri = await saveOutput('TDS.md', tdsPrompt);
-        workflowOutputs.tds = tdsPrompt;
-        outputPaths.tds = tdsFileUri.fsPath;
-
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 4 } });
-        const digPrompt = buildDigPrompt(tdsFileUri.fsPath, codebaseContext);
-        const digFileUri = await saveOutput('DIG.md', digPrompt);
-        workflowOutputs.dig = digPrompt;
-        outputPaths.dig = digFileUri.fsPath;
-
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 5 } });
-        const devPrompt = buildDevPrompt(digFileUri.fsPath, codebaseContext);
-        const devFileUri = await saveOutput('DEV.md', devPrompt);
-        workflowOutputs.dev = devPrompt;
-        outputPaths.dev = devFileUri.fsPath;
-
-        sidebarProvider.postMessage({ command: 'stepUpdate', data: { stepIndex: 6 } });
-
         sidebarProvider.postMessage({
-          command: 'workflowComplete',
-          data: {
-            html: `<pre style="white-space:pre-wrap">${escapeHtml(prdPrompt)}</pre>`,
-          },
+          command: 'generationComplete',
+          data: { step: 'prd', filePath: prdFileUri.fsPath, message: 'PRD Prompt generated successfully.' },
         });
 
-        vscode.window.showInformationMessage(
-          'DevFlow: Workflow complete! Prompt templates generated in .devflow folder.',
-        );
       } catch (error: any) {
         sidebarProvider.postMessage({
           command: 'error',
           data: { message: error?.message || 'An unexpected error occurred' },
         });
         vscode.window.showErrorMessage(`DevFlow Error: ${error?.message ?? String(error)}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('devflow.generateTds', async (data: any) => {
+      try {
+        const profile = await analyzer.analyze();
+        const codebaseContext = analyzer.summarize(profile);
+
+        const prdPrompt = vscode.workspace.fs.readFile(vscode.Uri.file(data.prdPath)).then(b => b.toString());
+
+        const tdsPrompt = buildTdsPrompt(data.prdPath, codebaseContext);
+        const tdsFileUri = await saveOutput('TDS.md', tdsPrompt);
+        workflowOutputs.tds = tdsPrompt;
+        outputPaths.tds = tdsFileUri.fsPath;
+
+        sidebarProvider.postMessage({
+          command: 'generationComplete',
+          data: { step: 'tds', filePath: tdsFileUri.fsPath, message: 'TDS Prompt generated successfully.' },
+        });
+      } catch (error: any) {
+        sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
+      }
+    }),
+
+    vscode.commands.registerCommand('devflow.generateDig', async (data: any) => {
+      try {
+        const profile = await analyzer.analyze();
+        const codebaseContext = analyzer.summarize(profile);
+
+        const digPrompt = buildDigPrompt(data.tdsPath, codebaseContext);
+        const digFileUri = await saveOutput('DIG.md', digPrompt);
+        workflowOutputs.dig = digPrompt;
+        outputPaths.dig = digFileUri.fsPath;
+
+        sidebarProvider.postMessage({
+          command: 'generationComplete',
+          data: { step: 'dig', filePath: digFileUri.fsPath, message: 'DIG Prompt generated successfully.' },
+        });
+      } catch (error: any) {
+        sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
+      }
+    }),
+
+    vscode.commands.registerCommand('devflow.generateDev', async (data: any) => {
+      try {
+        const profile = await analyzer.analyze();
+        const codebaseContext = analyzer.summarize(profile);
+
+        const devPrompt = buildDevPrompt(data.digPath, codebaseContext);
+        const devFileUri = await saveOutput('DEV.md', devPrompt);
+        workflowOutputs.dev = devPrompt;
+        outputPaths.dev = devFileUri.fsPath;
+
+        sidebarProvider.postMessage({
+          command: 'generationComplete',
+          data: { step: 'dev', filePath: devFileUri.fsPath, message: 'DEV Prompt generated successfully. Check the DevFlow outputs folder.' },
+        });
+      } catch (error: any) {
+        sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
       }
     }),
 
@@ -171,7 +202,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBar.text = '$(rocket) DevFlow AI';
-  statusBar.command = 'devflow.startWorkflow';
+  statusBar.command = 'devflow.generatePrd';
   statusBar.tooltip = 'Start DevFlow AI Workflow';
   statusBar.show();
   context.subscriptions.push(statusBar);

@@ -3,13 +3,14 @@
   "displayName": "DevFlow AI",
   "description": "Generate structured development prompts (PRD, TDS, DIG, DEV) from requirements",
   "version": "0.1.0",
-  "publisher": "your-publisher-id",
+  "publisher": "akhlaquea01",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other",
-    "Machine Learning"
+    "Machine Learning",
+    "AI"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -107,5 +108,7 @@
     "typescript": "^5.9.3",
     "webpack": "^5.105.4",
     "webpack-cli": "^5.1.4"
-  }
+  },
+  "repository": "https://github.com/Akhlaquea01/devFlow-ai",
+  "license": "MIT"
 }

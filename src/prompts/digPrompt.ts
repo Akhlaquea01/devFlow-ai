@@ -1,7 +1,8 @@
-export function buildDigPrompt(tdsPath: string, codebaseContext: string): string {
+export function buildDigPrompt(tdsContent: string, codebaseContext: string): string {
   return `You are a **Staff-Level Developer** acting as my peer collaborator. Create a step-by-step Development Implementation Guide based on the attached TDS.
 
-@${tdsPath}
+**TDS Content**:
+${tdsContent}
 
 **Codebase Context**:
 ${codebaseContext}
