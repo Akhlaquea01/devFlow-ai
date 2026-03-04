@@ -245,32 +245,24 @@
 
       case 'generationComplete':
         showGlobalStatus(msg.data.message);
-        const { step, filePath } = msg.data;
+        const { step } = msg.data;
 
         if (step === 'story') {
           generateStoryBtn.disabled = false;
           generateStoryBtn.textContent = '🚀 Generate Story Prompt';
-          storyFileInput.value = filePath;
-          generatePrdBtn.disabled = false;
-          step2Status.innerText = '✅ Story Generated';
+          step2Status.innerText = '✅ Story Prompt Ready';
         } else if (step === 'prd') {
           generatePrdBtn.disabled = false;
           generatePrdBtn.textContent = '🚀 Generate PRD Prompt';
-          prdFileInput.value = filePath;
-          generateTdsBtn.disabled = false;
-          step3Status.innerText = '✅ PRD Generated';
+          step3Status.innerText = '✅ PRD Prompt Ready';
         } else if (step === 'tds') {
           generateTdsBtn.disabled = false;
           generateTdsBtn.textContent = '🚀 Generate TDS Prompt';
-          tdsFileInput.value = filePath;
-          generateDigBtn.disabled = false;
-          step4Status.innerText = '✅ TDS Generated';
+          step4Status.innerText = '✅ TDS Prompt Ready';
         } else if (step === 'dig') {
           generateDigBtn.disabled = false;
           generateDigBtn.textContent = '🚀 Generate DIG Prompt';
-          digFileInput.value = filePath;
-          generateDevBtn.disabled = false;
-          step5Status.innerText = '✅ DIG Generated';
+          step5Status.innerText = '✅ DIG Prompt Ready';
         } else if (step === 'dev') {
           generateDevBtn.disabled = false;
           generateDevBtn.textContent = '🚀 Generate DEV Prompt';

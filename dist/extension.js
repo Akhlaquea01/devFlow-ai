@@ -68,10 +68,11 @@ async function activate(context) {
             const storyFileUri = await saveOutput(`Story_Prompt_${timestamp}.md`, storyPrompt);
             workflowOutputs.story = storyPrompt;
             outputPaths.story = storyFileUri.fsPath;
+            await vscode.env.clipboard.writeText(storyPrompt);
             vscode.commands.executeCommand('workbench.action.chat.open', { query: storyPrompt });
             sidebarProvider.postMessage({
                 command: 'generationComplete',
-                data: { step: 'story', filePath: storyFileUri.fsPath, message: 'Story Prompt generated successfully.' },
+                data: { step: 'story', filePath: storyFileUri.fsPath, message: 'Story Prompt copied to clipboard and sent to Chat.' },
             });
         }
         catch (error) {
@@ -91,10 +92,11 @@ async function activate(context) {
             const prdFileUri = await saveOutput(`PRD_Prompt_${timestamp}.md`, prdPrompt);
             workflowOutputs.prd = prdPrompt;
             outputPaths.prd = prdFileUri.fsPath;
+            await vscode.env.clipboard.writeText(prdPrompt);
             vscode.commands.executeCommand('workbench.action.chat.open', { query: prdPrompt });
             sidebarProvider.postMessage({
                 command: 'generationComplete',
-                data: { step: 'prd', filePath: prdFileUri.fsPath, message: 'PRD Prompt generated successfully.' },
+                data: { step: 'prd', filePath: prdFileUri.fsPath, message: 'PRD Prompt copied to clipboard and sent to Chat.' },
             });
         }
         catch (error) {
@@ -114,10 +116,11 @@ async function activate(context) {
             const tdsFileUri = await saveOutput(`TDS_Prompt_${timestamp}.md`, tdsPrompt);
             workflowOutputs.tds = tdsPrompt;
             outputPaths.tds = tdsFileUri.fsPath;
+            await vscode.env.clipboard.writeText(tdsPrompt);
             vscode.commands.executeCommand('workbench.action.chat.open', { query: tdsPrompt });
             sidebarProvider.postMessage({
                 command: 'generationComplete',
-                data: { step: 'tds', filePath: tdsFileUri.fsPath, message: 'TDS Prompt generated successfully.' },
+                data: { step: 'tds', filePath: tdsFileUri.fsPath, message: 'TDS Prompt copied to clipboard and sent to Chat.' },
             });
         }
         catch (error) {
@@ -133,10 +136,11 @@ async function activate(context) {
             const digFileUri = await saveOutput(`DIG_Prompt_${timestamp}.md`, digPrompt);
             workflowOutputs.dig = digPrompt;
             outputPaths.dig = digFileUri.fsPath;
+            await vscode.env.clipboard.writeText(digPrompt);
             vscode.commands.executeCommand('workbench.action.chat.open', { query: digPrompt });
             sidebarProvider.postMessage({
                 command: 'generationComplete',
-                data: { step: 'dig', filePath: digFileUri.fsPath, message: 'DIG Prompt generated successfully.' },
+                data: { step: 'dig', filePath: digFileUri.fsPath, message: 'DIG Prompt copied to clipboard and sent to Chat.' },
             });
         }
         catch (error) {
@@ -152,10 +156,11 @@ async function activate(context) {
             const devFileUri = await saveOutput(`DEV_Prompt_${timestamp}.md`, devPrompt);
             workflowOutputs.dev = devPrompt;
             outputPaths.dev = devFileUri.fsPath;
+            await vscode.env.clipboard.writeText(devPrompt);
             vscode.commands.executeCommand('workbench.action.chat.open', { query: devPrompt });
             sidebarProvider.postMessage({
                 command: 'generationComplete',
-                data: { step: 'dev', filePath: devFileUri.fsPath, message: 'DEV Prompt generated successfully. Check the DevFlow outputs folder.' },
+                data: { step: 'dev', filePath: devFileUri.fsPath, message: 'DEV Prompt copied to clipboard and sent to Chat.' },
             });
         }
         catch (error) {
@@ -261,7 +266,7 @@ async function saveOutput(filename, content) {
     if (!folders) {
         throw new Error('No workspace folder found');
     }
-    const outputDir = vscode.Uri.joinPath(folders[0].uri, '.devflow');
+    const outputDir = vscode.Uri.joinPath(folders[0].uri, '.devflow', 'prompts');
     try {
         await vscode.workspace.fs.createDirectory(outputDir);
     }
