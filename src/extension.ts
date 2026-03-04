@@ -13,7 +13,6 @@ let parser: RequirementParser;
 let sidebarProvider: SidebarProvider;
 
 const workflowOutputs: { story?: string; prd?: string; tds?: string; dig?: string; dev?: string } = {};
-const outputPaths: { story?: string; prd?: string; tds?: string; dig?: string; dev?: string } = {};
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   analyzer = new CodebaseAnalyzer();
@@ -35,17 +34,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         );
 
         const storyPrompt = buildStoryPrompt(requirement.parsedContent);
-        const timestamp = Date.now().toString().slice(-4);
-        const storyFileUri = await saveOutput(`Story_Prompt_${timestamp}.md`, storyPrompt);
         workflowOutputs.story = storyPrompt;
-        outputPaths.story = storyFileUri.fsPath;
 
         await vscode.env.clipboard.writeText(storyPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: storyPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'story', filePath: storyFileUri.fsPath, message: 'Story Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'story', message: 'Story Prompt copied to clipboard and sent to Chat.' },
         });
 
       } catch (error: any) {
@@ -65,17 +61,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const codebaseContext = analyzer.summarize(profile);
 
         const prdPrompt = buildPrdPrompt(requirement, codebaseContext, data.scope);
-        const timestamp = Date.now().toString().slice(-4);
-        const prdFileUri = await saveOutput(`PRD_Prompt_${timestamp}.md`, prdPrompt);
         workflowOutputs.prd = prdPrompt;
-        outputPaths.prd = prdFileUri.fsPath;
 
         await vscode.env.clipboard.writeText(prdPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: prdPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'prd', filePath: prdFileUri.fsPath, message: 'PRD Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'prd', message: 'PRD Prompt copied to clipboard and sent to Chat.' },
         });
 
       } catch (error: any) {
@@ -95,17 +88,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const prdContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.prdPath)).then(b => b.toString());
 
         const tdsPrompt = buildTdsPrompt(prdContent, codebaseContext);
-        const timestamp = Date.now().toString().slice(-4);
-        const tdsFileUri = await saveOutput(`TDS_Prompt_${timestamp}.md`, tdsPrompt);
         workflowOutputs.tds = tdsPrompt;
-        outputPaths.tds = tdsFileUri.fsPath;
 
         await vscode.env.clipboard.writeText(tdsPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: tdsPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'tds', filePath: tdsFileUri.fsPath, message: 'TDS Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'tds', message: 'TDS Prompt copied to clipboard and sent to Chat.' },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -120,17 +110,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const tdsContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.tdsPath)).then(b => b.toString());
 
         const digPrompt = buildDigPrompt(tdsContent, codebaseContext);
-        const timestamp = Date.now().toString().slice(-4);
-        const digFileUri = await saveOutput(`DIG_Prompt_${timestamp}.md`, digPrompt);
         workflowOutputs.dig = digPrompt;
-        outputPaths.dig = digFileUri.fsPath;
 
         await vscode.env.clipboard.writeText(digPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: digPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'dig', filePath: digFileUri.fsPath, message: 'DIG Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'dig', message: 'DIG Prompt copied to clipboard and sent to Chat.' },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -145,17 +132,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const digContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.digPath)).then(b => b.toString());
 
         const devPrompt = buildDevPrompt(digContent, codebaseContext);
-        const timestamp = Date.now().toString().slice(-4);
-        const devFileUri = await saveOutput(`DEV_Prompt_${timestamp}.md`, devPrompt);
         workflowOutputs.dev = devPrompt;
-        outputPaths.dev = devFileUri.fsPath;
 
         await vscode.env.clipboard.writeText(devPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: devPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'dev', filePath: devFileUri.fsPath, message: 'DEV Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'dev', message: 'DEV Prompt copied to clipboard and sent to Chat.' },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -193,15 +177,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('devflow.openPromptFile', async (data: { fileType: string }) => {
       try {
-        const filePath = (outputPaths as any)[data.fileType];
-        if (filePath) {
-          const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+        const content = (workflowOutputs as any)[data.fileType];
+        if (content) {
+          const doc = await vscode.workspace.openTextDocument({ content: content, language: 'markdown' });
           vscode.window.showTextDocument(doc);
         } else {
-          vscode.window.showErrorMessage(`File not generated yet for: ${data.fileType}`);
+          vscode.window.showErrorMessage(`Prompt not generated yet for: ${data.fileType}`);
         }
       } catch (error: any) {
-        vscode.window.showErrorMessage(`Failed to open file: ${error.message}`);
+        vscode.window.showErrorMessage(`Failed to open prompt: ${error.message}`);
       }
     }),
 
@@ -262,22 +246,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.commands.executeCommand('workbench.view.extension.devflow-sidebar');
     })
   );
-}
-
-async function saveOutput(filename: string, content: string): Promise<vscode.Uri> {
-  const folders = vscode.workspace.workspaceFolders;
-  if (!folders) {
-    throw new Error('No workspace folder found');
-  }
-  const outputDir = vscode.Uri.joinPath(folders[0].uri, '.devflow', 'prompts');
-  try {
-    await vscode.workspace.fs.createDirectory(outputDir);
-  } catch {
-    // ignore
-  }
-  const fileUri = vscode.Uri.joinPath(outputDir, filename);
-  await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content, 'utf-8'));
-  return fileUri;
 }
 
 function escapeHtml(text: string): string {
