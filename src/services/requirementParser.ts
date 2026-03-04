@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+const pdfParse = require('pdf-parse');
+import * as mammoth from 'mammoth';
 
 export type InputSource = 'text' | 'clipboard' | 'jira' | 'file';
 
@@ -25,9 +27,7 @@ export class RequirementParser {
       result.parsedContent += '\n\n### Context Attachments:\n';
       for (const filePath of attachedFiles) {
         try {
-          const fileUri = vscode.Uri.file(filePath);
-          const data = await vscode.workspace.fs.readFile(fileUri);
-          const content = Buffer.from(data).toString('utf8');
+          const content = await this.parseFileContent(filePath);
           const ext = path.extname(filePath).slice(1) || 'text';
           const filename = path.basename(filePath);
 
@@ -68,6 +68,23 @@ export class RequirementParser {
     };
   }
 
+  private async parseFileContent(filePath: string): Promise<string> {
+    const fileUri = vscode.Uri.file(filePath);
+    const data = await vscode.workspace.fs.readFile(fileUri);
+    const buffer = Buffer.from(data);
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (ext === '.pdf') {
+      const pdfData = await pdfParse(buffer);
+      return pdfData.text;
+    } else if (ext === '.docx') {
+      const docxData = await mammoth.extractRawText({ buffer: buffer });
+      return docxData.value;
+    } else {
+      return buffer.toString('utf8');
+    }
+  }
+
   private async parseFromFile(filePath: string): Promise<ParsedRequirement> {
     try {
       let absolutePath = filePath;
@@ -78,9 +95,7 @@ export class RequirementParser {
         }
       }
 
-      const fileUri = vscode.Uri.file(absolutePath);
-      const data = await vscode.workspace.fs.readFile(fileUri);
-      const content = Buffer.from(data).toString('utf8');
+      const content = await this.parseFileContent(absolutePath);
 
       return {
         source: 'file',
@@ -99,7 +114,7 @@ export class RequirementParser {
       source: 'jira',
       title: `Jira Ticket: ${ticketId.substring(0, 80)}`,
       rawContent: ticketId,
-      parsedContent: `Jira Ticket Context: ${ticketId}\n\n(Note: Direct Jira integration may require configuration. Currently using ticket ID/URL as reference.)`,
+      parsedContent: `Fetch the Jira issue ${ticketId} using MCP tools to get the full story context.`,
       metadata: { ticketId },
     };
   }

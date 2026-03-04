@@ -99,6 +99,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.35",
+    "@types/pdf-parse": "^1.1.5",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -110,5 +111,9 @@
     "webpack-cli": "^5.1.4"
   },
   "repository": "https://github.com/Akhlaquea01/devFlow-ai",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "mammoth": "^1.11.0",
+    "pdf-parse": "^2.4.5"
+  }
 }
