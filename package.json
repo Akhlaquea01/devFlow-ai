@@ -1,9 +1,9 @@
 {
-  "name": "devflow-ai",
-  "displayName": "DevFlow AI",
+  "name": "masTiFlow",
+  "displayName": "masti-flow",
   "description": "Generate structured development prompts (PRD, TDS, DIG, DEV) from requirements",
-  "version": "0.1.0",
-  "publisher": "akhlaquea01",
+  "version": "0.1.1",
+  "publisher": "MasTi",
   "engines": {
     "vscode": "^1.85.0"
   },
