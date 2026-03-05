@@ -1,7 +1,8 @@
 export function buildPrdPrompt(requirement: string, codebaseContext: string, scope: string): string {
   return `You are a **Senior Product Manager** acting as my peer collaborator. Help me create a comprehensive Product Requirements Document.
 
-**Story**: ${requirement}
+**User Story / Requirement**:
+${requirement}
 
 **Implementation Scope**: ${scope}
 

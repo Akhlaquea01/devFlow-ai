@@ -16,6 +16,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (msg) => {
       switch (msg.command) {
+        case 'generateStory':
+          vscode.commands.executeCommand('devflow.generateStory', msg.data);
+          break;
         case 'generatePrd':
           vscode.commands.executeCommand('devflow.generatePrd', msg.data);
           break;
@@ -81,17 +84,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https: data:;">
   <link href="${styleUri}" rel="stylesheet">
   <title>DevFlow AI</title>
 </head>
 <body>
   <div id="app">
-    <!-- Step 1: PRD -->
+    <!-- Step 1: Story -->
     <section class="panel" id="step1-section">
-      <h3 class="panel-title">1️⃣ Generate PRD Prompt</h3>
+      <h3 class="panel-title">1️⃣ Generate Story Prompt</h3>
       <div class="input-group">
         <select id="input-source">
-          <option value="text">Text / User Story</option>
+          <option value="text">Text / Prompt</option>
           <option value="clipboard">Paste from Clipboard</option>
           <option value="jira">Jira Issue</option>
         </select>
@@ -103,7 +107,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <div id="attached-files-list" style="font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-bottom: 5px;"></div>
         </div>
 
-        <div class="scope-selector">
+        <button id="generate-story-btn" class="primary-btn">🚀 Generate Story Prompt</button>
+      </div>
+    </section>
+
+    <!-- Step 2: PRD -->
+    <section class="panel" id="step2-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">2️⃣ Generate PRD Prompt <span id="step2-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+      <div class="input-group">
+        <label class="field-label">Select generated Story file:</label>
+        <div style="display:flex; gap: 8px;">
+          <input type="text" id="story-file-input" readonly placeholder="No Story selected" style="flex:1">
+          <button id="select-story-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Browse</button>
+        </div>
+
+        <div class="scope-selector" style="margin-top: 10px;">
           <label>Scope:</label>
           <div class="radio-group">
             <label><input type="radio" name="scope" value="fullstack" checked> Full Stack</label>
@@ -112,13 +130,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <label><input type="radio" name="scope" value="testing"> Testing</label>
           </div>
         </div>
-        <button id="generate-prd-btn" class="primary-btn">🚀 Generate PRD Prompt</button>
+
+        <button id="generate-prd-btn" class="primary-btn" disabled style="margin-top: 10px;">🚀 Generate PRD Prompt</button>
       </div>
     </section>
 
-    <!-- Step 2: TDS -->
-    <section class="panel" id="step2-section">
-      <h3 class="panel-title" style="display:flex; justify-content:space-between">2️⃣ Generate TDS Prompt <span id="step2-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+    <!-- Step 3: TDS -->
+    <section class="panel" id="step3-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">3️⃣ Generate TDS Prompt <span id="step3-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
       <div class="input-group">
         <label class="field-label">Select generated PRD file:</label>
         <div style="display:flex; gap: 8px;">
@@ -129,9 +148,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       </div>
     </section>
 
-    <!-- Step 3: DIG -->
-    <section class="panel" id="step3-section">
-      <h3 class="panel-title" style="display:flex; justify-content:space-between">3️⃣ Generate DIG Prompt <span id="step3-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+    <!-- Step 4: DIG -->
+    <section class="panel" id="step4-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">4️⃣ Generate DIG Prompt <span id="step4-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
       <div class="input-group">
         <label class="field-label">Select generated TDS file:</label>
         <div style="display:flex; gap: 8px;">
@@ -142,9 +161,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       </div>
     </section>
 
-    <!-- Step 4: DEV -->
-    <section class="panel" id="step4-section">
-      <h3 class="panel-title" style="display:flex; justify-content:space-between">4️⃣ Generate DEV Prompt <span id="step4-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+    <!-- Step 5: DEV -->
+    <section class="panel" id="step5-section">
+      <h3 class="panel-title" style="display:flex; justify-content:space-between">5️⃣ Generate DEV Prompt <span id="step5-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
       <div class="input-group">
         <label class="field-label">Select generated DIG file:</label>
         <div style="display:flex; gap: 8px;">
