@@ -1,16 +1,60 @@
-export function buildPrdPrompt(storyContent: string, codebaseContext: string, scope: string): string {
+/**
+ * Builds the PRD Generation prompt.
+ *
+ * @param storyContent    - Story text (only used as fallback if storyFilePath is not provided).
+ * @param codebaseContext - Summarised tech-stack from the workspace analyser.
+ * @param scope           - Implementation scope (fullstack / ui / backend / testing).
+ * @param storyFilePath   - Absolute path to STORY.md on disk. When provided, the AI reads the
+ *                          file directly — we do NOT embed the full story text in the prompt.
+ * @param outputFilePath  - Absolute path where PRD.md will be saved. The IDE AI is instructed
+ *                          to write its output to this file instead of printing it in chat.
+ */
+export function buildPrdPrompt(
+  storyContent: string,
+  codebaseContext: string,
+  scope: string,
+  storyFilePath?: string,
+  outputFilePath?: string
+): string {
   // Extract the story title from the Story section (if present)
   const titleMatch = storyContent.match(/## Title\s+(.+)/m);
   const storyTitle = titleMatch ? titleMatch[1].trim() : 'Untitled Story';
+
+  const storyReference = storyFilePath
+    ? `**Story File (read directly from disk):** \`${storyFilePath}\`
+> The IDE AI should open and read this file to get the full story context.
+> Do NOT rely on an embedded copy — always read the latest version from the file.`
+    : `**Full User Story / Requirement**:
+\`\`\`markdown
+${storyContent.trim()}
+\`\`\``;
+
+  const outputSection = outputFilePath
+    ? `
+---
+
+## 🤖 IDE AI Instructions
+
+You are running inside an IDE (VS Code with GitHub Copilot, Cursor, or similar).
+The output of this prompt **must be saved to**:
+\`\`\`
+${outputFilePath}
+\`\`\`
+
+Rules:
+1. **Read** the story from \`${storyFilePath || 'the story file provided'}\` before generating the PRD.
+2. **Write** the complete PRD directly to \`${outputFilePath}\` — do not print the whole document in chat.
+3. Preserve all section numbers and names exactly as specified below.
+4. If PRD.md already exists, **update only sections that have changed** — do not wipe progress notes or annotations.
+5. After saving, confirm: "✅ PRD.md updated at \`${outputFilePath}\`"
+`
+    : '';
 
   return `You are a **Senior Product Manager** acting as my peer collaborator. Help me create a comprehensive Product Requirements Document.
 
 **Story Title**: ${storyTitle}
 
-**Full User Story / Requirement**:
-\`\`\`markdown
-${storyContent.trim()}
-\`\`\`
+${storyReference}
 
 **Implementation Scope**: ${scope}
 
@@ -77,5 +121,5 @@ For each feature, provide:
 
 ---
 
-**Output Format**: Well-structured Markdown PRD ready for stakeholder review and engineering handoff.`;
+**Output Format**: Well-structured Markdown PRD ready for stakeholder review and engineering handoff.${outputSection}`;
 }

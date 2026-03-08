@@ -2,10 +2,13 @@
 
 > **Turn any requirement into production-ready AI prompts in minutes — right inside VS Code.**
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://marketplace.visualstudio.com/items?itemName=MasTi.masTiFlow)
+[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://marketplace.visualstudio.com/items?itemName=MasTi.masTiFlow)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-brightgreen.svg)](https://code.visualstudio.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-Akhlaquea01%2FdevFlow--ai-lightgrey.svg)](https://github.com/Akhlaquea01/devFlow-ai)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Akhlaquea01/devFlow-ai/pulls)
+
+Created by **[Akhlaque](https://github.com/Akhlaquea01)** — open source and open for contributions 🚀
 
 ---
 
@@ -128,8 +131,9 @@ Open the Command Palette (`Ctrl+Shift+P`) and run:
 
 | Field | Description |
 |-------|-------------|
-| **Input Source** | Choose: Text/Prompt, Clipboard, or Jira Issue |
+| **Input Source** | Choose: Text/Prompt, Clipboard, Jira Issue, or **Browse MD File** |
 | **Requirement** | Describe what you want to build |
+| **Browse MD File** | Pick an existing `.md` file — the AI reads it directly, no copy-paste needed |
 | **Context Files** | Attach `.pdf`, `.docx`, or any code file for additional context |
 | **Figma / Image URL** | Add a Figma link or screenshot URL |
 
@@ -297,8 +301,18 @@ A: TypeScript, JavaScript, Python, Java, Go, Rust, C#; React, Angular, Vue, Next
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/Akhlaquea01/devFlow-ai).
+This project is **open source and open for contributions**! Whether it's a bug fix, a new feature, improved prompts, or better documentation — all PRs are welcome.
 
+👉 **Repository:** [github.com/Akhlaquea01/devFlow-ai](https://github.com/Akhlaquea01/devFlow-ai)
+
+### Ways to contribute
+- 🐛 **Report bugs** — [Open an issue](https://github.com/Akhlaquea01/devFlow-ai/issues)
+- 💡 **Suggest features** — [Start a discussion](https://github.com/Akhlaquea01/devFlow-ai/discussions)
+- 🔧 **Submit a PR** — Fork → branch → code → PR
+- 📝 **Improve prompts** — Better STORY / PRD / TDS / DIG / DEV templates are always appreciated
+- 📖 **Improve docs** — Fix typos, add examples, translate
+
+### Local development
 ```bash
 # Clone the repo
 git clone https://github.com/Akhlaquea01/devFlow-ai.git
@@ -313,9 +327,17 @@ npm run watch
 # Press F5 in VS Code to launch the Extension Development Host
 ```
 
+Please follow the existing code style and add a brief description to your PR. All contributions will be credited. ✨
+
 ---
 
 ## Release Notes
+
+### 0.1.3
+- Browse MD File input for Story step — pass a file path instead of copy-pasting
+- All prompts now reference input file paths directly (no content embedding)
+- IDE AI Instructions block in every prompt — AI updates `.devflow/*.md` files automatically
+- Enhanced DEV prompt rewritten as a full coding agent (session log, DIG step tracking, targeted edits)
 
 ### 0.1.2
 - Step-by-step 5-stage wizard (Story → PRD → TDS → DIG → DEV)
@@ -331,7 +353,7 @@ npm run watch
 
 ## License
 
-MIT © [MasTi](https://github.com/Akhlaquea01)
+MIT © [Akhlaque](https://github.com/Akhlaquea01)
 
 ---
 

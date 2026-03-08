@@ -46,9 +46,10 @@
   const copyPreviewBtn = document.getElementById('copy-preview-btn');
 
   let attachedFiles = [];
-  let currentFileSelectionTarget = null; // 'story', 'prd', 'tds', 'dig', or 'context'
+  let currentFileSelectionTarget = null; // 'story', 'prd', 'tds', 'dig', 'context', or 'storyMd'
   let currentPreviewStep = null;
   let currentPreviewText = null;
+  let storyMdPath = null; // path when user picks an existing MD file for the story input
 
   // ==========================================
   // Global Helpers
@@ -112,18 +113,38 @@
   // ==========================================
   // Step 1 Logic (Story)
   // ==========================================
+  // New elements for MD file picker in Step 1
+  const storyMdPicker = document.getElementById('story-md-picker');
+  const storyTextInputArea = document.getElementById('story-text-input-area');
+  const storyMdPathInput = document.getElementById('story-md-path');
+  const browseStoryMdBtn = document.getElementById('browse-story-md-btn');
+
   inputSource.addEventListener('change', () => {
-    switch (inputSource.value) {
+    const mode = inputSource.value;
+    if (mode === 'mdfile') {
+      storyMdPicker.style.display = 'block';
+      storyTextInputArea.style.display = 'none';
+    } else {
+      storyMdPicker.style.display = 'none';
+      storyTextInputArea.style.display = 'block';
+    }
+    switch (mode) {
       case 'jira':
         requirementInput.placeholder = 'Enter Jira Ticket ID or URL...';
         break;
       case 'clipboard':
         requirementInput.placeholder = '(Will read from clipboard on submit)';
         break;
+      case 'mdfile':
+        break;
       default:
         requirementInput.placeholder = 'Describe your requirement...';
         break;
     }
+  });
+
+  browseStoryMdBtn.addEventListener('click', () => {
+    vscode.postMessage({ command: 'selectFiles', data: { multiple: false, filters: { 'Markdown': ['md'] }, target: 'storyMd' } });
   });
 
   attachFilesBtn.addEventListener('click', () => {
@@ -176,6 +197,23 @@
   }
 
   generateStoryBtn.addEventListener('click', () => {
+    // MD file mode
+    if (inputSource.value === 'mdfile') {
+      if (!storyMdPath) {
+        showGlobalStatus('Please select an MD file first', true);
+        return;
+      }
+      generateStoryBtn.disabled = true;
+      generateStoryBtn.textContent = '⏳ Generating Story...';
+      showGlobalStatus('Reading MD file and preparing Story Prompt...');
+      vscode.postMessage({
+        command: 'generateStory',
+        data: { source: 'mdfile', storyFilePath: storyMdPath }
+      });
+      return;
+    }
+
+    // Text / clipboard / jira mode
     const requirement = requirementInput.value.trim();
     if (!requirement && inputSource.value !== 'clipboard') {
       showGlobalStatus('Requirement input is empty', true);
@@ -310,6 +348,10 @@
           const newFiles = filePaths.filter(f => !attachedFiles.includes(f));
           attachedFiles = [...attachedFiles, ...newFiles];
           renderAttachedFiles();
+        } else if (msg.data.target === 'storyMd' || currentFileSelectionTarget === 'storyMd') {
+          storyMdPath = filePaths[0];
+          storyMdPathInput.value = filePaths[0].split(/[/\\]/).pop() + '  (' + filePaths[0] + ')';
+          storyMdPathInput.title = filePaths[0];
         } else if (currentFileSelectionTarget === 'story') {
           storyFileInput.value = filePaths[0];
           generatePrdBtn.disabled = false;

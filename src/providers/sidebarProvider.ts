@@ -46,6 +46,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case 'copyPrompt':
           vscode.commands.executeCommand('devflow.copyPrompt', msg.data);
           break;
+        case 'selectStoryMd':
+          this.handleSelectFiles({ multiple: false, filters: { 'Markdown': ['md'] }, target: 'storyMd' });
+          break;
         case 'selectFiles':
           this.handleSelectFiles(msg?.data || {});
           break;
@@ -66,7 +69,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     if (uris && uris.length > 0) {
       const filePaths = uris.map(uri => uri.fsPath);
-      this.postMessage({ command: 'filesSelected', data: { filePaths } });
+      // If a specific target is set, pass it back for routing in sidebar.js
+      this.postMessage({ command: 'filesSelected', data: { filePaths, target: options.target } });
     }
   }
 
@@ -121,13 +125,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <option value="text">Text / Prompt</option>
           <option value="clipboard">Paste from Clipboard</option>
           <option value="jira">Jira Issue</option>
+          <option value="mdfile">Browse MD File</option>
         </select>
-        <textarea id="requirement-input" placeholder="Describe your requirement..." rows="4"></textarea>
 
-        <div class="attachment-group" style="margin-top: 5px;">
-          <input type="text" id="image-url-input" placeholder="Figma or Image URL (optional)" style="width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px;">
-          <button id="attach-files-btn" class="secondary-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">📎 Attach Context Files</button>
-          <div id="attached-files-list" style="font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-bottom: 5px;"></div>
+        <!-- MD File picker (shown when 'Browse MD File' is selected) -->
+        <div id="story-md-picker" style="display:none; margin-top:6px;">
+          <div style="display:flex; gap: 8px;">
+            <input type="text" id="story-md-path" readonly placeholder="No MD file selected" style="flex:1; padding:6px; background:var(--vscode-input-background); color:var(--vscode-input-foreground); border:1px solid var(--vscode-input-border); border-radius:2px;">
+            <button id="browse-story-md-btn" class="secondary-btn" style="padding:6px; background:var(--vscode-button-secondaryBackground); color:var(--vscode-button-secondaryForeground); border:none; cursor:pointer; border-radius:2px;">📂 Browse</button>
+          </div>
+          <div style="font-size:0.8em; color:var(--vscode-descriptionForeground); margin-top:4px;">The AI will read this file directly — no copy-paste needed.</div>
+        </div>
+
+        <!-- Text input (shown for text / jira / clipboard modes) -->
+        <div id="story-text-input-area">
+          <textarea id="requirement-input" placeholder="Describe your requirement..." rows="4"></textarea>
+          <div class="attachment-group" style="margin-top: 5px;">
+            <input type="text" id="image-url-input" placeholder="Figma or Image URL (optional)" style="width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px;">
+            <button id="attach-files-btn" class="secondary-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">📎 Attach Context Files</button>
+            <div id="attached-files-list" style="font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-bottom: 5px;"></div>
+          </div>
         </div>
 
         <button id="generate-story-btn" class="primary-btn">🚀 Generate Story Prompt</button>

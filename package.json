@@ -2,7 +2,7 @@
   "name": "masTiFlow",
   "displayName": "masti-flow",
   "description": "Generate structured development prompts (PRD, TDS, DIG, DEV) from requirements",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "MasTi",
   "engines": {
     "vscode": "^1.85.0"
