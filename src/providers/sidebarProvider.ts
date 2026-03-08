@@ -34,6 +34,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case 'analyzeCodebase':
           vscode.commands.executeCommand('devflow.analyzeCodebase');
           break;
+        case 'resetWorkflow':
+          vscode.commands.executeCommand('devflow.resetWorkflow');
+          break;
         case 'switchTab':
           vscode.commands.executeCommand('devflow.switchTab', msg.data);
           break;
@@ -90,6 +93,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="app">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+      <button id="analyze-workspace-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">🔍 Analyze Workspace</button>
+      <button id="reset-workflow-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Reset Workflow</button>
+    </div>
+
+    <div id="workspace-analysis-result" style="display:none; margin-bottom:10px; padding:10px; background:var(--vscode-editorInfo-background); color:var(--vscode-editorInfo-foreground); font-size:12px; border-radius:4px; white-space:pre-wrap;"></div>
+
+    <!-- Step Progress Indicator -->
+    <div class="step-indicator" style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px; font-weight: bold; color: var(--vscode-descriptionForeground);">
+      <span id="indicator-story" style="color: var(--vscode-foreground);">① STORY</span>
+      <span>→</span>
+      <span id="indicator-prd">② PRD</span>
+      <span>→</span>
+      <span id="indicator-tds">③ TDS</span>
+      <span>→</span>
+      <span id="indicator-dig">④ DIG</span>
+      <span>→</span>
+      <span id="indicator-dev">⑤ DEV</span>
+    </div>
+
     <!-- Step 1: Story -->
     <section class="panel" id="step1-section">
       <h3 class="panel-title">1️⃣ Generate Story Prompt</h3>
@@ -177,6 +200,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     <!-- Output Status -->
     <div id="global-status" style="margin-top: 10px; font-size: 13px; color: var(--vscode-notificationsInfoIcon-foreground); display: none; padding: 10px; background: var(--vscode-editorInfo-background); border-radius: 4px;">
+    </div>
+
+    <!-- Preview Container -->
+    <div id="preview-container" style="display:none; margin-top: 15px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); padding: 10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+        <h3 style="margin:0; font-size: 14px;">Prompt Preview</h3>
+        <div>
+          <button id="view-full-btn" class="secondary-btn" style="padding: 4px 8px; margin-right: 5px;">View Full</button>
+          <button id="copy-preview-btn" class="secondary-btn" style="padding: 4px 8px;">Copy</button>
+        </div>
+      </div>
+      <pre id="preview-content" style="white-space: pre-wrap; font-size: 12px; max-height: 250px; overflow-y: auto; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); border: none; padding: 0;"></pre>
     </div>
   </div>
   <script src="${scriptUri}"></script>

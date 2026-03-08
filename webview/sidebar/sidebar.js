@@ -37,8 +37,18 @@
   // Global
   const globalStatus = document.getElementById('global-status');
 
+  const analyzeWorkspaceBtn = document.getElementById('analyze-workspace-btn');
+  const workspaceAnalysisResult = document.getElementById('workspace-analysis-result');
+  const resetWorkflowBtn = document.getElementById('reset-workflow-btn');
+  const previewContainer = document.getElementById('preview-container');
+  const previewContent = document.getElementById('preview-content');
+  const viewFullBtn = document.getElementById('view-full-btn');
+  const copyPreviewBtn = document.getElementById('copy-preview-btn');
+
   let attachedFiles = [];
   let currentFileSelectionTarget = null; // 'story', 'prd', 'tds', 'dig', or 'context'
+  let currentPreviewStep = null;
+  let currentPreviewText = null;
 
   // ==========================================
   // Global Helpers
@@ -48,6 +58,56 @@
     globalStatus.innerText = message;
     globalStatus.style.color = isError ? 'var(--vscode-errorForeground)' : 'var(--vscode-notificationsInfoIcon-foreground)';
   }
+
+  function updateStepIndicator(activeStep) {
+    const steps = ['story', 'prd', 'tds', 'dig', 'dev'];
+    let reached = true;
+    steps.forEach(s => {
+      const el = document.getElementById('indicator-' + s);
+      if (s === activeStep) {
+        el.style.color = 'var(--vscode-foreground)';
+        el.style.fontWeight = 'bold';
+        reached = false;
+      } else if (reached) {
+        el.style.color = 'var(--vscode-charts-green)';
+        el.style.fontWeight = 'bold';
+      } else {
+        el.style.color = 'var(--vscode-descriptionForeground)';
+        el.style.fontWeight = 'normal';
+      }
+    });
+  }
+
+  function showPreview(text, step) {
+    currentPreviewStep = step;
+    currentPreviewText = text;
+    previewContainer.style.display = 'block';
+    const lines = text.split('\n');
+    previewContent.textContent = lines.slice(0, 30).join('\n') + (lines.length > 30 ? '\n\n... [Truncated]' : '');
+  }
+
+  analyzeWorkspaceBtn.addEventListener('click', () => {
+    vscode.postMessage({ command: 'analyzeCodebase' });
+  });
+
+  resetWorkflowBtn.addEventListener('click', () => {
+    vscode.postMessage({ command: 'resetWorkflow' });
+  });
+
+  viewFullBtn.addEventListener('click', () => {
+    if (currentPreviewStep) {
+      vscode.postMessage({ command: 'openPromptFile', data: { fileType: currentPreviewStep } });
+    }
+  });
+
+  copyPreviewBtn.addEventListener('click', () => {
+    if (currentPreviewText) {
+      navigator.clipboard.writeText(currentPreviewText).then(() => {
+        showGlobalStatus('Copied to clipboard');
+      });
+    }
+  });
+
 
   // ==========================================
   // Step 1 Logic (Story)
@@ -267,12 +327,17 @@
 
       case 'generationComplete':
         showGlobalStatus(msg.data.message);
-        const { step } = msg.data;
+        const { step, promptContent } = msg.data;
+
+        if (promptContent) {
+          showPreview(promptContent, step);
+        }
 
         if (step === 'story') {
           generateStoryBtn.disabled = false;
           generateStoryBtn.textContent = '🚀 Generate Story Prompt';
           step1Status.innerText = '✅ Story Prompt sent to Chat.';
+          updateStepIndicator('prd');
           // Auto-populate Step 2 with the saved story file path
           if (msg.data.outputPath) {
             storyFileInput.value = msg.data.outputPath;
@@ -282,20 +347,76 @@
         } else if (step === 'prd') {
           generatePrdBtn.disabled = false;
           generatePrdBtn.textContent = '🚀 Generate PRD Prompt';
-          step3Status.innerText = '✅ PRD Prompt Ready';
+          step3Status.innerText = '✅ PRD Prompt sent to Chat.';
+          updateStepIndicator('tds');
+          // Auto-populate Step 3 with the saved PRD file path
+          if (msg.data.outputPath) {
+            prdFileInput.value = msg.data.outputPath;
+            generateTdsBtn.disabled = false;
+            step3Status.innerText = `✅ PRD Prompt sent to Chat. Step 3 auto-filled.`;
+          }
         } else if (step === 'tds') {
           generateTdsBtn.disabled = false;
           generateTdsBtn.textContent = '🚀 Generate TDS Prompt';
-          step4Status.innerText = '✅ TDS Prompt Ready';
+          step4Status.innerText = '✅ TDS Prompt sent to Chat.';
+          updateStepIndicator('dig');
+          // Auto-populate Step 4 with the saved TDS file path
+          if (msg.data.outputPath) {
+            tdsFileInput.value = msg.data.outputPath;
+            generateDigBtn.disabled = false;
+            step4Status.innerText = `✅ TDS Prompt sent to Chat. Step 4 auto-filled.`;
+          }
         } else if (step === 'dig') {
           generateDigBtn.disabled = false;
           generateDigBtn.textContent = '🚀 Generate DIG Prompt';
-          step5Status.innerText = '✅ DIG Prompt Ready';
+          step5Status.innerText = '✅ DIG Prompt sent to Chat.';
+          updateStepIndicator('dev');
+          // Auto-populate Step 5 with the saved DIG file path
+          if (msg.data.outputPath) {
+            digFileInput.value = msg.data.outputPath;
+            generateDevBtn.disabled = false;
+            step5Status.innerText = `✅ DIG Prompt sent to Chat. Step 5 auto-filled.`;
+          }
         } else if (step === 'dev') {
           generateDevBtn.disabled = false;
           generateDevBtn.textContent = '🚀 Generate DEV Prompt';
+          updateStepIndicator('dev');
         }
         break;
+
+      case 'workspaceAnalysisResult':
+        workspaceAnalysisResult.style.display = 'block';
+        workspaceAnalysisResult.textContent = `Detected Stack:\n${msg.data.result}`;
+        break;
+
+      case 'workflowReset':
+        requirementInput.value = '';
+        imageUrlInput.value = '';
+        attachedFiles = [];
+        renderAttachedFiles();
+
+        storyFileInput.value = '';
+        prdFileInput.value = '';
+        tdsFileInput.value = '';
+        digFileInput.value = '';
+
+        generatePrdBtn.disabled = true;
+        generateTdsBtn.disabled = true;
+        generateDigBtn.disabled = true;
+        generateDevBtn.disabled = true;
+
+        step1Status.innerText = '';
+        step3Status.innerText = '';
+        step4Status.innerText = '';
+        step5Status.innerText = '';
+
+        globalStatus.style.display = 'none';
+        previewContainer.style.display = 'none';
+        workspaceAnalysisResult.style.display = 'none';
+
+        updateStepIndicator('story');
+        break;
+
 
       case 'error':
         showGlobalStatus(`❌ ${msg.data.message}`, true);

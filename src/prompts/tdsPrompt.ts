@@ -52,7 +52,7 @@ Create a traceability matrix:
 
 ### 5. API Design
 For each endpoint:
-- **Method + Path**: \\\`POST /api/v1/resource\\\`
+- **Method + Path**: \`POST /api/v1/resource\`
 - **Purpose**: What PRD requirement it fulfills
 - **Request Schema**: JSON with types and validation
 - **Response Schema**: Success and error responses
@@ -127,7 +127,7 @@ For each external service:
 - Use Mermaid for all diagrams
 - Every technical decision must reference the PRD requirement it addresses
 - Include code-level details: class names, function signatures, file paths
-- Flag unknowns with \\\`🔴 DECISION NEEDED\\\` markers
+- Flag unknowns with \`🔴 DECISION NEEDED\` markers
 - Provide alternatives for major design decisions with trade-off analysis
 - This TDS will be the direct input for DIG creation
 
@@ -135,4 +135,3 @@ For each external service:
 
 **Output Format**: Detailed Markdown TDS with diagrams, schemas, and full traceability to PRD.`;
 }
-

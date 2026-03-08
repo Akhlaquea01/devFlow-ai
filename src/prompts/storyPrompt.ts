@@ -1,35 +1,57 @@
-export function buildStoryPrompt(requirement: string, codebaseContext?: string): string {
+export function buildStoryPrompt(requirement: string, codebaseContext?: string, storyId?: string): string {
   const projectSection = codebaseContext
-    ? `\n## Project Context\nThe following details describe the existing codebase and project setup. Use this to tailor the story to the actual tech stack and project structure:\n\n${codebaseContext}\n`
-    : '';
+    ? `Detected Tech Stack:\n${codebaseContext}`
+    : 'Detected Tech Stack: Not provided\nFramework: Not provided\nLanguage: Not provided\nArchitecture: Not provided';
+
+  const id = storyId || `DEVFLOW-UX-${Date.now()}`;
 
   return `You are an expert Agile Product Manager and Business Analyst.
 Your task is to generate a comprehensive Agile User Story based on the provided input.
-The user might have provided a simple prompt, a copy-pasted requirement, context files, or a Jira ticket ID (which you should fetch using MCP tools if available).
+The user might have provided a simple prompt, a copy-pasted requirement, context files, or a Jira ticket ID.
 
 Analyze the input and generate a structured User Story in Markdown (.md) format.
-${projectSection}
-Please output the result clearly using the following structure:
 
-# [Story Title]
+**IMPORTANT:** You MUST strictly follow the exact Markdown structure below. Do not omit any sections.
+
+# Story
+
+## Title
+<clear feature title>
+
+## Project
+<project name or inferred from context>
+
+## Description
+<high level explanation of requirement>
 
 ## User Story
-**As a** [type of user]
-**I want** [some goal]
-**So that** [some reason]
+**As a** <user>
+**I want** <feature>
+**So that** <benefit>
 
 ## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
+- <AC-1>
+- <AC-2>
+- <AC-3>
 
-## Notes & Assumptions
-- Note 1
+## Inputs
+Source type: <inferred from requirement input>
+Requirement text: ${requirement}
+Attached files: <list if any>
+Figma links: <list if any>
 
-## Technical Considerations
-- Consider the existing tech stack and frameworks listed in Project Context above.
-- Acceptance criteria should align with the detected languages / frameworks where relevant.
+## Context
+${projectSection}
 
-## Provided Input / Context
-${requirement}
+## Scope
+<Fullstack | UI | Backend | Testing - infer from requirement if possible>
+
+## Success Metrics
+- <metric 1>
+- <metric 2>
+
+## Dependencies
+- <dependency 1>
+- <dependency 2>
 `;
 }

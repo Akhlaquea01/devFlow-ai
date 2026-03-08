@@ -38,18 +38,56 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const profile = await analyzer.analyze();
         const codebaseContext = analyzer.summarize(profile);
 
-        const storyPrompt = buildStoryPrompt(requirement.parsedContent, codebaseContext);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+
+        let storyPrompt = buildStoryPrompt(requirement.parsedContent, codebaseContext);
+
+        // Template Overrides
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          try {
+            const templatePath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow', 'templates', 'story.template.md');
+            const templateData = await vscode.workspace.fs.readFile(templatePath);
+            let customTemplate = Buffer.from(templateData).toString('utf8');
+            customTemplate = customTemplate.replace(/\{\{requirement\}\}/g, () => requirement.parsedContent);
+            customTemplate = customTemplate.replace(/\{\{codebaseContext\}\}/g, () => codebaseContext);
+            storyPrompt = customTemplate;
+          } catch { /* use default */ }
+        }
+
         workflowOutputs.story = storyPrompt;
 
-        // Save story prompt to .devflow/STORY.md
-        const workspaceFolders = vscode.workspace.workspaceFolders;
+        // Save story prompt to .devflow/STORY.md and log session
         let storyOutputPath: string | undefined;
         if (workspaceFolders && workspaceFolders.length > 0) {
           const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
           try { await vscode.workspace.fs.createDirectory(devflowDir); } catch { /* already exists */ }
           const storyUri = vscode.Uri.joinPath(devflowDir, 'STORY.md');
+
+          let oldContent = '';
+          try {
+            oldContent = Buffer.from(await vscode.workspace.fs.readFile(storyUri)).toString('utf8');
+          } catch { /* no file */ }
+
+          if (oldContent && oldContent !== storyPrompt) {
+            // output diff
+            const tempOldUri = vscode.Uri.joinPath(devflowDir, 'STORY.old.md');
+            await vscode.workspace.fs.writeFile(tempOldUri, Buffer.from(oldContent, 'utf8'));
+            const tempNewUri = vscode.Uri.joinPath(devflowDir, 'STORY.new.md');
+            await vscode.workspace.fs.writeFile(tempNewUri, Buffer.from(storyPrompt, 'utf8'));
+            vscode.commands.executeCommand('vscode.diff', tempOldUri, tempNewUri, 'STORY.md (Old vs New)');
+          }
+
           await vscode.workspace.fs.writeFile(storyUri, Buffer.from(storyPrompt, 'utf8'));
           storyOutputPath = storyUri.fsPath;
+
+          const sessionLogPath = vscode.Uri.joinPath(devflowDir, 'session.json');
+          let sessionLogs: any[] = [];
+          try {
+            const currentLogs = await vscode.workspace.fs.readFile(sessionLogPath);
+            sessionLogs = JSON.parse(currentLogs.toString());
+          } catch { /* file doesn't exist yet */ }
+          sessionLogs.push({ timestamp: new Date().toISOString(), step: 'STORY', input: data.source, output: 'STORY.md' });
+          await vscode.workspace.fs.writeFile(sessionLogPath, Buffer.from(JSON.stringify(sessionLogs, null, 2), 'utf8'));
         }
 
         await vscode.env.clipboard.writeText(storyPrompt);
@@ -57,7 +95,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'story', message: 'Story Prompt sent to Chat. Paste the AI response back as your Story file, or use the auto-filled path below.', outputPath: storyOutputPath },
+          data: { step: 'story', message: 'Story Prompt sent to Chat. Paste the AI response back as your Story file, or use the auto-filled path below.', outputPath: storyOutputPath, promptContent: storyPrompt },
         });
 
       } catch (error: any) {
@@ -76,15 +114,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const profile = await analyzer.analyze();
         const codebaseContext = analyzer.summarize(profile);
 
-        const prdPrompt = buildPrdPrompt(requirement, codebaseContext, data.scope);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        let prdPrompt = buildPrdPrompt(requirement, codebaseContext, data.scope);
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          try {
+            const templatePath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow', 'templates', 'prd.template.md');
+            const templateData = await vscode.workspace.fs.readFile(templatePath);
+            let customTemplate = Buffer.from(templateData).toString('utf8');
+            customTemplate = customTemplate.replace(/\{\{requirement\}\}/g, () => requirement);
+            customTemplate = customTemplate.replace(/\{\{codebaseContext\}\}/g, () => codebaseContext);
+            prdPrompt = customTemplate;
+          } catch { /* use default */ }
+        }
+
         workflowOutputs.prd = prdPrompt;
+
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
+          const prdUri = vscode.Uri.joinPath(devflowDir, 'PRD.md');
+          let oldContent = '';
+          try {
+            oldContent = Buffer.from(await vscode.workspace.fs.readFile(prdUri)).toString('utf8');
+          } catch { /* no file */ }
+
+          if (oldContent && oldContent !== prdPrompt) {
+            const tempOldUri = vscode.Uri.joinPath(devflowDir, 'PRD.old.md');
+            await vscode.workspace.fs.writeFile(tempOldUri, Buffer.from(oldContent, 'utf8'));
+            const tempNewUri = vscode.Uri.joinPath(devflowDir, 'PRD.new.md');
+            await vscode.workspace.fs.writeFile(tempNewUri, Buffer.from(prdPrompt, 'utf8'));
+            vscode.commands.executeCommand('vscode.diff', tempOldUri, tempNewUri, 'PRD.md (Old vs New)');
+          }
+
+          await vscode.workspace.fs.writeFile(prdUri, Buffer.from(prdPrompt, 'utf8'));
+
+          const sessionLogPath = vscode.Uri.joinPath(devflowDir, 'session.json');
+          let sessionLogs: any[] = [];
+          try {
+            const currentLogs = await vscode.workspace.fs.readFile(sessionLogPath);
+            sessionLogs = JSON.parse(currentLogs.toString());
+          } catch { /* file doesn't exist yet */ }
+          sessionLogs.push({ timestamp: new Date().toISOString(), step: 'PRD', input: data.storyPath, output: 'PRD.md' });
+          await vscode.workspace.fs.writeFile(sessionLogPath, Buffer.from(JSON.stringify(sessionLogs, null, 2), 'utf8'));
+        }
 
         await vscode.env.clipboard.writeText(prdPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: prdPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'prd', message: 'PRD Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'prd', message: 'PRD Prompt copied to clipboard and sent to Chat.', promptContent: prdPrompt },
         });
 
       } catch (error: any) {
@@ -103,15 +181,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const prdContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.prdPath)).then(b => b.toString());
 
-        const tdsPrompt = buildTdsPrompt(prdContent, codebaseContext);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        let tdsPrompt = buildTdsPrompt(prdContent, codebaseContext);
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          try {
+            const templatePath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow', 'templates', 'tds.template.md');
+            const templateData = await vscode.workspace.fs.readFile(templatePath);
+            let customTemplate = Buffer.from(templateData).toString('utf8');
+            customTemplate = customTemplate.replace(/\{\{prdContent\}\}/g, () => prdContent);
+            customTemplate = customTemplate.replace(/\{\{codebaseContext\}\}/g, () => codebaseContext);
+            tdsPrompt = customTemplate;
+          } catch { /* use default */ }
+        }
+
         workflowOutputs.tds = tdsPrompt;
+
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
+          const tdsUri = vscode.Uri.joinPath(devflowDir, 'TDS.md');
+          let oldContent = '';
+          try {
+            oldContent = Buffer.from(await vscode.workspace.fs.readFile(tdsUri)).toString('utf8');
+          } catch { /* no file */ }
+
+          if (oldContent && oldContent !== tdsPrompt) {
+            const tempOldUri = vscode.Uri.joinPath(devflowDir, 'TDS.old.md');
+            await vscode.workspace.fs.writeFile(tempOldUri, Buffer.from(oldContent, 'utf8'));
+            const tempNewUri = vscode.Uri.joinPath(devflowDir, 'TDS.new.md');
+            await vscode.workspace.fs.writeFile(tempNewUri, Buffer.from(tdsPrompt, 'utf8'));
+            vscode.commands.executeCommand('vscode.diff', tempOldUri, tempNewUri, 'TDS.md (Old vs New)');
+          }
+
+          await vscode.workspace.fs.writeFile(tdsUri, Buffer.from(tdsPrompt, 'utf8'));
+
+          const sessionLogPath = vscode.Uri.joinPath(devflowDir, 'session.json');
+          let sessionLogs: any[] = [];
+          try {
+            const currentLogs = await vscode.workspace.fs.readFile(sessionLogPath);
+            sessionLogs = JSON.parse(currentLogs.toString());
+          } catch { /* file doesn't exist yet */ }
+          sessionLogs.push({ timestamp: new Date().toISOString(), step: 'TDS', input: data.prdPath, output: 'TDS.md' });
+          await vscode.workspace.fs.writeFile(sessionLogPath, Buffer.from(JSON.stringify(sessionLogs, null, 2), 'utf8'));
+        }
 
         await vscode.env.clipboard.writeText(tdsPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: tdsPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'tds', message: 'TDS Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'tds', message: 'TDS Prompt copied to clipboard and sent to Chat.', promptContent: tdsPrompt },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -125,15 +243,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const tdsContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.tdsPath)).then(b => b.toString());
 
-        const digPrompt = buildDigPrompt(tdsContent, codebaseContext);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        let digPrompt = buildDigPrompt(tdsContent, codebaseContext);
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          try {
+            const templatePath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow', 'templates', 'dig.template.md');
+            const templateData = await vscode.workspace.fs.readFile(templatePath);
+            let customTemplate = Buffer.from(templateData).toString('utf8');
+            customTemplate = customTemplate.replace(/\{\{tdsContent\}\}/g, () => tdsContent);
+            customTemplate = customTemplate.replace(/\{\{codebaseContext\}\}/g, () => codebaseContext);
+            digPrompt = customTemplate;
+          } catch { /* use default */ }
+        }
+
         workflowOutputs.dig = digPrompt;
+
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
+          const digUri = vscode.Uri.joinPath(devflowDir, 'DIG.md');
+          let oldContent = '';
+          try {
+            oldContent = Buffer.from(await vscode.workspace.fs.readFile(digUri)).toString('utf8');
+          } catch { /* no file */ }
+
+          if (oldContent && oldContent !== digPrompt) {
+            const tempOldUri = vscode.Uri.joinPath(devflowDir, 'DIG.old.md');
+            await vscode.workspace.fs.writeFile(tempOldUri, Buffer.from(oldContent, 'utf8'));
+            const tempNewUri = vscode.Uri.joinPath(devflowDir, 'DIG.new.md');
+            await vscode.workspace.fs.writeFile(tempNewUri, Buffer.from(digPrompt, 'utf8'));
+            vscode.commands.executeCommand('vscode.diff', tempOldUri, tempNewUri, 'DIG.md (Old vs New)');
+          }
+
+          await vscode.workspace.fs.writeFile(digUri, Buffer.from(digPrompt, 'utf8'));
+
+          const sessionLogPath = vscode.Uri.joinPath(devflowDir, 'session.json');
+          let sessionLogs: any[] = [];
+          try {
+            const currentLogs = await vscode.workspace.fs.readFile(sessionLogPath);
+            sessionLogs = JSON.parse(currentLogs.toString());
+          } catch { /* file doesn't exist yet */ }
+          sessionLogs.push({ timestamp: new Date().toISOString(), step: 'DIG', input: data.tdsPath, output: 'DIG.md' });
+          await vscode.workspace.fs.writeFile(sessionLogPath, Buffer.from(JSON.stringify(sessionLogs, null, 2), 'utf8'));
+        }
 
         await vscode.env.clipboard.writeText(digPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: digPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'dig', message: 'DIG Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'dig', message: 'DIG Prompt copied to clipboard and sent to Chat.', promptContent: digPrompt },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -147,15 +305,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const digContent = await vscode.workspace.fs.readFile(vscode.Uri.file(data.digPath)).then(b => b.toString());
 
-        const devPrompt = buildDevPrompt(digContent, codebaseContext);
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        let devPrompt = buildDevPrompt(digContent, codebaseContext);
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          try {
+            const templatePath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow', 'templates', 'dev.template.md');
+            const templateData = await vscode.workspace.fs.readFile(templatePath);
+            let customTemplate = Buffer.from(templateData).toString('utf8');
+            customTemplate = customTemplate.replace(/\{\{digContent\}\}/g, () => digContent);
+            customTemplate = customTemplate.replace(/\{\{codebaseContext\}\}/g, () => codebaseContext);
+            devPrompt = customTemplate;
+          } catch { /* use default */ }
+        }
+
         workflowOutputs.dev = devPrompt;
+
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
+          const devUri = vscode.Uri.joinPath(devflowDir, 'DEV.md');
+          let oldContent = '';
+          try {
+            oldContent = Buffer.from(await vscode.workspace.fs.readFile(devUri)).toString('utf8');
+          } catch { /* no file */ }
+
+          if (oldContent && oldContent !== devPrompt) {
+            const tempOldUri = vscode.Uri.joinPath(devflowDir, 'DEV.old.md');
+            await vscode.workspace.fs.writeFile(tempOldUri, Buffer.from(oldContent, 'utf8'));
+            const tempNewUri = vscode.Uri.joinPath(devflowDir, 'DEV.new.md');
+            await vscode.workspace.fs.writeFile(tempNewUri, Buffer.from(devPrompt, 'utf8'));
+            vscode.commands.executeCommand('vscode.diff', tempOldUri, tempNewUri, 'DEV.md (Old vs New)');
+          }
+
+          await vscode.workspace.fs.writeFile(devUri, Buffer.from(devPrompt, 'utf8'));
+
+          const sessionLogPath = vscode.Uri.joinPath(devflowDir, 'session.json');
+          let sessionLogs: any[] = [];
+          try {
+            const currentLogs = await vscode.workspace.fs.readFile(sessionLogPath);
+            sessionLogs = JSON.parse(currentLogs.toString());
+          } catch { /* file doesn't exist yet */ }
+          sessionLogs.push({ timestamp: new Date().toISOString(), step: 'DEV', input: data.digPath, output: 'DEV.md' });
+          await vscode.workspace.fs.writeFile(sessionLogPath, Buffer.from(JSON.stringify(sessionLogs, null, 2), 'utf8'));
+        }
 
         await vscode.env.clipboard.writeText(devPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: devPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'dev', message: 'DEV Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'dev', message: 'DEV Prompt copied to clipboard and sent to Chat.', promptContent: devPrompt },
         });
       } catch (error: any) {
         sidebarProvider.postMessage({ command: 'error', data: { message: error?.message || 'An unexpected error occurred' } });
@@ -165,11 +363,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('devflow.analyzeCodebase', async () => {
       const profile = await analyzer.analyze();
       const summary = analyzer.summarize(profile);
-      const doc = await vscode.workspace.openTextDocument({
-        content: summary,
-        language: 'markdown',
+      sidebarProvider.postMessage({
+        command: 'workspaceAnalysisResult',
+        data: { result: summary }
       });
-      vscode.window.showTextDocument(doc);
+    }),
+
+    vscode.commands.registerCommand('devflow.resetWorkflow', () => {
+      workflowOutputs.story = undefined;
+      workflowOutputs.prd = undefined;
+      workflowOutputs.tds = undefined;
+      workflowOutputs.dig = undefined;
+      workflowOutputs.dev = undefined;
+      sidebarProvider.postMessage({
+        command: 'workflowReset',
+        data: {}
+      });
     }),
 
     vscode.commands.registerCommand('devflow.switchTab', (data: { tab: string }) => {
