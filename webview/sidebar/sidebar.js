@@ -71,25 +71,46 @@
   });
 
   function renderAttachedFiles() {
+    attachedFilesList.textContent = '';
     if (attachedFiles.length === 0) {
-      attachedFilesList.innerHTML = '';
       return;
     }
-    const fileHtml = attachedFiles.map((file, index) => {
-      const fileName = file.split(/[/\\]/).pop();
-      return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0;">
-                <span title="${file}" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📄 ${fileName}</span>
-                <button data-index="${index}" class="remove-file-btn" style="background: none; border: none; color: var(--vscode-errorForeground); cursor: pointer; padding: 0 4px;">❌</button>
-              </div>`;
-    }).join('');
-    attachedFilesList.innerHTML = `<strong>Attached (${attachedFiles.length}):</strong>${fileHtml}`;
 
-    document.querySelectorAll('.remove-file-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const index = parseInt(e.target.getAttribute('data-index'), 10);
+    const titleLabel = document.createElement('strong');
+    titleLabel.textContent = `Attached (${attachedFiles.length}):`;
+    attachedFilesList.appendChild(titleLabel);
+
+    attachedFiles.forEach((file, index) => {
+      const fileName = file.split(/[/\\]/).pop();
+      const fileRow = document.createElement('div');
+      fileRow.style.display = 'flex';
+      fileRow.style.justifyContent = 'space-between';
+      fileRow.style.alignItems = 'center';
+      fileRow.style.padding = '2px 0';
+
+      const fileSpan = document.createElement('span');
+      fileSpan.title = file;
+      fileSpan.style.overflow = 'hidden';
+      fileSpan.style.textOverflow = 'ellipsis';
+      fileSpan.style.whiteSpace = 'nowrap';
+      fileSpan.textContent = `📄 ${fileName}`;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-file-btn';
+      removeBtn.style.background = 'none';
+      removeBtn.style.border = 'none';
+      removeBtn.style.color = 'var(--vscode-errorForeground)';
+      removeBtn.style.cursor = 'pointer';
+      removeBtn.style.padding = '0 4px';
+      removeBtn.textContent = '❌';
+      removeBtn.addEventListener('click', () => {
         attachedFiles.splice(index, 1);
         renderAttachedFiles();
       });
+
+      fileRow.appendChild(fileSpan);
+      fileRow.appendChild(removeBtn);
+      attachedFilesList.appendChild(fileRow);
     });
   }
 
