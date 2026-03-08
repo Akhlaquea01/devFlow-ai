@@ -1,8 +1,49 @@
-export function buildDigPrompt(tdsContent: string, codebaseContext: string): string {
+/**
+ * Builds the DIG (Development Implementation Guide) generation prompt.
+ *
+ * @param tdsContent      - TDS text (fallback when tdsFilePath is not provided).
+ * @param codebaseContext - Summarised tech-stack from the workspace analyser.
+ * @param tdsFilePath     - Absolute path to TDS.md on disk. When provided, the AI reads the
+ *                          file directly — we do NOT embed the full TDS text in the prompt.
+ * @param outputFilePath  - Absolute path where DIG.md will be saved. The IDE AI is instructed
+ *                          to write its output to this file instead of printing it in chat.
+ */
+export function buildDigPrompt(
+  tdsContent: string,
+  codebaseContext: string,
+  tdsFilePath?: string,
+  outputFilePath?: string
+): string {
+  const tdsReference = tdsFilePath
+    ? `**TDS File (read directly from disk):** \`${tdsFilePath}\`
+> Open and read this file to get the full Technical Design Specification. Always read the latest version from disk.`
+    : `**TDS Content**:
+${tdsContent}`;
+
+  const outputSection = outputFilePath
+    ? `
+---
+
+## 🤖 IDE AI Instructions
+
+You are running inside an IDE (VS Code with GitHub Copilot, Cursor, or similar).
+The output of this prompt **must be saved to**:
+\`\`\`
+${outputFilePath}
+\`\`\`
+
+Rules:
+1. **Read** the TDS from \`${tdsFilePath || 'the TDS file provided'}\` before generating the DIG.
+2. **Write** the complete DIG directly to \`${outputFilePath}\` — do not print the whole document in chat.
+3. Preserve all section numbers and checklist formatting exactly as specified below.
+4. If DIG.md already exists, **update only steps that have changed or been added** — do not reset checked items (\`[x]\`).
+5. After saving, confirm: "✅ DIG.md updated at \`${outputFilePath}\`"
+`
+    : '';
+
   return `You are a **Staff-Level Developer** acting as my peer collaborator. Create a step-by-step Development Implementation Guide based on the attached TDS.
 
-**TDS Content**:
-${tdsContent}
+${tdsReference}
 
 **Codebase Context**:
 ${codebaseContext}
@@ -11,7 +52,7 @@ ${codebaseContext}
 
 ## Context
 
-The TDS (attached above) defines the complete technical design. Your job is to convert it into an **actionable, sequential implementation plan** that I can follow commit-by-commit during development. Each step must be atomic, testable, and traceable to a TDS section.
+The TDS (referenced above) defines the complete technical design. Your job is to convert it into an **actionable, sequential implementation plan** that I can follow commit-by-commit during development. Each step must be atomic, testable, and traceable to a TDS section.
 
 ---
 
@@ -31,14 +72,14 @@ The TDS (attached above) defines the complete technical design. Your job is to c
 
 ### 3. Implementation Roadmap
 
-\\\`\\\`\\\`mermaid
+\`\`\`mermaid
 gantt
     title Implementation Phases
     section Phase 1: Foundation
     Task 1 :a1, 2026-03-05, 2d
     section Phase 2: Core
     Task 2 :a2, after a1, 3d
-\\\`\\\`\\\`
+\`\`\`
 
 Identify:
 - What **must** be sequential (dependency chain)
@@ -47,7 +88,7 @@ Identify:
 - Major milestone checkpoints
 
 ### 4. File & Folder Structure
-\\\`\\\`\\\`
+\`\`\`
 project-root/
 ├── src/
 │   ├── extension.ts          # Entry point
@@ -60,7 +101,7 @@ project-root/
 ├── webview/                   # Webview UI source
 ├── resources/                 # Icons, assets
 └── package.json               # Extension manifest
-\\\`\\\`\\\`
+\`\`\`
 
 For each new file, specify:
 - File path and name
@@ -72,13 +113,13 @@ For each new file, specify:
 
 For **each step**, provide:
 
-\\\`\\\`\\\`
+\`\`\`
 #### Step N: [Task Title]
 - **TDS Reference**: §X.Y
 - **PRD Requirement**: FR-XXX
 - **Action**: What to do (create / modify / delete)
 - **Files**:
-  - \\\`path/to/file.ts\\\` — description of changes
+  - \`path/to/file.ts\` — description of changes
 - **Implementation Details**:
   - Key logic to implement
   - Function signatures with types
@@ -86,8 +127,8 @@ For **each step**, provide:
 - **Verification**:
   - [ ] How to verify this step works
   - [ ] What tests to run
-- **Commit Message**: \\\`feat(scope): description\\\`
-\\\`\\\`\\\`
+- **Commit Message**: \`feat(scope): description\`
+\`\`\`
 
 ### 6. Database Implementation Steps
 In order:
@@ -136,7 +177,7 @@ For each step in §5, define:
 ### 11. Development Checklist
 Create the master checklist in this exact format:
 
-\\\`\\\`\\\`
+\`\`\`
 ## Phase 1: Foundation
 - [ ] Step 1: [Task] → TDS §X.Y → FR-XXX
 - [ ] Step 2: [Task] → TDS §X.Y → FR-XXX
@@ -152,7 +193,7 @@ Create the master checklist in this exact format:
 
 ## Phase 4: Polish & Release
 ...
-\\\`\\\`\\\`
+\`\`\`
 
 ### 12. Common Pitfalls & Best Practices
 - Anti-patterns to avoid for this specific implementation
@@ -170,13 +211,12 @@ Create the master checklist in this exact format:
 - Include **exact file paths**, function names, and type signatures
 - Steps should follow the TDS architecture — don't deviate
 - Provide commit messages for each step (conventional commits format)
-- Flag blockers with \\\`🚫 BLOCKED BY\\\` markers
-- Flag decisions with \\\`🔴 DECISION NEEDED\\\` markers
+- Flag blockers with \`🚫 BLOCKED BY\` markers
+- Flag decisions with \`🔴 DECISION NEEDED\` markers
 - Estimate time for each step (in minutes or hours)
 - This DIG will be the direct input for DEV implementation
 
 ---
 
-**Output Format**: Numbered, actionable checklist with full implementation details, ready to start coding immediately.`;
+**Output Format**: Numbered, actionable checklist with full implementation details, ready to start coding immediately.${outputSection}`;
 }
-

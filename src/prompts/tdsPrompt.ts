@@ -1,8 +1,49 @@
-export function buildTdsPrompt(prdContent: string, codebaseContext: string): string {
+/**
+ * Builds the TDS (Technical Design Specification) generation prompt.
+ *
+ * @param prdContent      - PRD text (fallback when prdFilePath is not provided).
+ * @param codebaseContext - Summarised tech-stack from the workspace analyser.
+ * @param prdFilePath     - Absolute path to PRD.md on disk. When provided, the AI reads the
+ *                          file directly — we do NOT embed the full PRD text in the prompt.
+ * @param outputFilePath  - Absolute path where TDS.md will be saved. The IDE AI is instructed
+ *                          to write its output to this file instead of printing it in chat.
+ */
+export function buildTdsPrompt(
+  prdContent: string,
+  codebaseContext: string,
+  prdFilePath?: string,
+  outputFilePath?: string
+): string {
+  const prdReference = prdFilePath
+    ? `**PRD File (read directly from disk):** \`${prdFilePath}\`
+> Open and read this file to get the full PRD. Do NOT rely on an embedded copy — always read the latest version from disk.`
+    : `**PRD Content**:
+${prdContent}`;
+
+  const outputSection = outputFilePath
+    ? `
+---
+
+## 🤖 IDE AI Instructions
+
+You are running inside an IDE (VS Code with GitHub Copilot, Cursor, or similar).
+The output of this prompt **must be saved to**:
+\`\`\`
+${outputFilePath}
+\`\`\`
+
+Rules:
+1. **Read** the PRD from \`${prdFilePath || 'the PRD file provided'}\` before generating the TDS.
+2. **Write** the complete TDS directly to \`${outputFilePath}\` — do not print the whole document in chat.
+3. Preserve all section numbers and names exactly as specified below.
+4. If TDS.md already exists, **update only sections that have changed** — preserve diagrams and decision records.
+5. After saving, confirm: "✅ TDS.md updated at \`${outputFilePath}\`"
+`
+    : '';
+
   return `You are a **Senior Software Architect** acting as my peer collaborator. Create a detailed Technical Design Specification based on the attached PRD.
 
-**PRD Content**:
-${prdContent}
+${prdReference}
 
 **Codebase Context**:
 ${codebaseContext}
@@ -11,7 +52,7 @@ ${codebaseContext}
 
 ## Context
 
-The PRD (attached above) defines the business requirements. Your job is to translate **every** PRD requirement into a concrete technical design. Every functional requirement (FR-xxx) must have a corresponding technical specification.
+The PRD (referenced above) defines the business requirements. Your job is to translate **every** PRD requirement into a concrete technical design. Every functional requirement (FR-xxx) must have a corresponding technical specification.
 
 ---
 
@@ -52,7 +93,7 @@ Create a traceability matrix:
 
 ### 5. API Design
 For each endpoint:
-- **Method + Path**: \\\`POST /api/v1/resource\\\`
+- **Method + Path**: \`POST /api/v1/resource\`
 - **Purpose**: What PRD requirement it fulfills
 - **Request Schema**: JSON with types and validation
 - **Response Schema**: Success and error responses
@@ -127,12 +168,11 @@ For each external service:
 - Use Mermaid for all diagrams
 - Every technical decision must reference the PRD requirement it addresses
 - Include code-level details: class names, function signatures, file paths
-- Flag unknowns with \\\`🔴 DECISION NEEDED\\\` markers
+- Flag unknowns with \`🔴 DECISION NEEDED\` markers
 - Provide alternatives for major design decisions with trade-off analysis
 - This TDS will be the direct input for DIG creation
 
 ---
 
-**Output Format**: Detailed Markdown TDS with diagrams, schemas, and full traceability to PRD.`;
+**Output Format**: Detailed Markdown TDS with diagrams, schemas, and full traceability to PRD.${outputSection}`;
 }
-

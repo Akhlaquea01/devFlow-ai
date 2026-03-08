@@ -114,7 +114,7 @@ export class RequirementParser {
       source: 'jira',
       title: `Jira Ticket: ${ticketId.substring(0, 80)}`,
       rawContent: ticketId,
-      parsedContent: `Fetch the Jira issue ${ticketId} using MCP tools to get the full story context.`,
+      parsedContent: `Fetch the Jira issue ${ticketId} via MCP.\nIf Jira MCP unavailable:\nUsing ticket ID as context only.\nTicket ID: ${ticketId}`,
       metadata: { ticketId },
     };
   }
