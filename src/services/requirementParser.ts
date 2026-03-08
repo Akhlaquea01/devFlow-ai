@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-const pdfParse = require('pdf-parse');
+import pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 
 export type InputSource = 'text' | 'clipboard' | 'jira' | 'file';
