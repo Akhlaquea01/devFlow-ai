@@ -34,7 +34,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           data.imageUrls || []
         );
 
-        const storyPrompt = buildStoryPrompt(requirement.parsedContent);
+        // Analyze the codebase (reads package.json, detects tech stack, etc.)
+        const profile = await analyzer.analyze();
+        const codebaseContext = analyzer.summarize(profile);
+
+        const storyPrompt = buildStoryPrompt(requirement.parsedContent, codebaseContext);
         workflowOutputs.story = storyPrompt;
 
         // Save story prompt to .devflow/STORY.md

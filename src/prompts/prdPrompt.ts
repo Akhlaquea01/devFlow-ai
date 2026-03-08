@@ -1,8 +1,16 @@
-export function buildPrdPrompt(requirement: string, codebaseContext: string, scope: string): string {
+export function buildPrdPrompt(storyContent: string, codebaseContext: string, scope: string): string {
+  // Extract the story title from the first # heading (if present)
+  const titleMatch = storyContent.match(/^#\s+(.+)/m);
+  const storyTitle = titleMatch ? titleMatch[1].trim() : 'Untitled Story';
+
   return `You are a **Senior Product Manager** acting as my peer collaborator. Help me create a comprehensive Product Requirements Document.
 
-**User Story / Requirement**:
-${requirement}
+**Story Title**: ${storyTitle}
+
+**Full User Story / Requirement**:
+\`\`\`markdown
+${storyContent.trim()}
+\`\`\`
 
 **Implementation Scope**: ${scope}
 

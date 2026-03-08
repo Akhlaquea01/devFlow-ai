@@ -24,5 +24,11 @@ export interface CodebaseProfile {
   structure: CodebaseStructure;
   patterns: CodebasePatterns;
   timestamp: string;
+  projectMeta?: {
+    name?: string;
+    version?: string;
+    description?: string;
+  };
 }
+
 

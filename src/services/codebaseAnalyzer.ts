@@ -12,10 +12,11 @@ export class CodebaseAnalyzer {
   }
 
   async analyze(): Promise<CodebaseProfile> {
-    const [techStack, structure, patterns] = await Promise.all([
+    const [techStack, structure, patterns, projectMeta] = await Promise.all([
       this.detectTechStack(),
       this.scanStructure(),
       this.detectPatterns(),
+      this.readProjectMeta(),
     ]);
 
     return {
@@ -23,8 +24,23 @@ export class CodebaseAnalyzer {
       techStack,
       structure,
       patterns,
+      projectMeta,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  private async readProjectMeta(): Promise<{ name?: string; version?: string; description?: string }> {
+    try {
+      const pkgPath = require('path').join(this.workspaceRoot, 'package.json');
+      const pkg = JSON.parse(await require('fs/promises').readFile(pkgPath, 'utf-8'));
+      return {
+        name: pkg.name,
+        version: pkg.version,
+        description: pkg.description,
+      };
+    } catch {
+      return {};
+    }
   }
 
   private async detectTechStack(): Promise<CodebaseProfile['techStack']> {
@@ -93,6 +109,24 @@ export class CodebaseAnalyzer {
       }
       if (allDeps['fastify']) {
         stack.frameworks.push('Fastify');
+      }
+      if (allDeps['@types/vscode'] || allDeps['vscode']) {
+        stack.frameworks.push('VS Code Extension API');
+      }
+      if (allDeps['webpack'] || allDeps['webpack-cli']) {
+        stack.buildTools.push('Webpack');
+      }
+      if (allDeps['esbuild']) {
+        stack.buildTools.push('esbuild');
+      }
+      if (allDeps['vite']) {
+        stack.buildTools.push('Vite');
+      }
+      if (allDeps['mammoth']) {
+        stack.frameworks.push('mammoth (DOCX parsing)');
+      }
+      if (allDeps['pdf-parse']) {
+        stack.frameworks.push('pdf-parse (PDF parsing)');
       }
     } catch {
       // ignore
@@ -186,17 +220,30 @@ export class CodebaseAnalyzer {
   }
 
   summarize(profile: CodebaseProfile): string {
-    const lines = [
+    const lines: string[] = [];
+
+    // Project identity from package.json
+    if (profile.projectMeta) {
+      const { name, version, description } = profile.projectMeta;
+      lines.push('## Project Info');
+      if (name) { lines.push(`- **Name**: ${name}`); }
+      if (version) { lines.push(`- **Version**: ${version}`); }
+      if (description) { lines.push(`- **Description**: ${description}`); }
+      lines.push('');
+    }
+
+    lines.push(
       '## Codebase Profile',
       `- **Languages**: ${profile.techStack.languages.join(', ') || 'Unknown'}`,
       `- **Frameworks**: ${profile.techStack.frameworks.join(', ') || 'None detected'}`,
+      `- **Build Tools**: ${profile.techStack.buildTools.join(', ') || 'None detected'}`,
       `- **Package Manager**: ${profile.techStack.packageManager}`,
       `- **Has Tests**: ${profile.patterns.hasTests ? 'Yes' : 'No'}`,
       `- **Has CI/CD**: ${profile.patterns.hasCI ? 'Yes' : 'No'}`,
       `- **Has Docker**: ${profile.patterns.hasDocker ? 'Yes' : 'No'}`,
       `- **Monorepo**: ${profile.patterns.isMonorepo ? 'Yes' : 'No'}`,
       `- **Top-level dirs**: ${profile.structure.directories.join(', ')}`,
-    ];
+    );
     return lines.join('\n');
   }
 }
