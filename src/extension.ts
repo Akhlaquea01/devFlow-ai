@@ -37,12 +37,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const storyPrompt = buildStoryPrompt(requirement.parsedContent);
         workflowOutputs.story = storyPrompt;
 
+        // Save story prompt to .devflow/STORY.md
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        let storyOutputPath: string | undefined;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const devflowDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.devflow');
+          try { await vscode.workspace.fs.createDirectory(devflowDir); } catch { /* already exists */ }
+          const storyUri = vscode.Uri.joinPath(devflowDir, 'STORY.md');
+          await vscode.workspace.fs.writeFile(storyUri, Buffer.from(storyPrompt, 'utf8'));
+          storyOutputPath = storyUri.fsPath;
+        }
+
         await vscode.env.clipboard.writeText(storyPrompt);
         vscode.commands.executeCommand('workbench.action.chat.open', { query: storyPrompt });
 
         sidebarProvider.postMessage({
           command: 'generationComplete',
-          data: { step: 'story', message: 'Story Prompt copied to clipboard and sent to Chat.' },
+          data: { step: 'story', message: 'Story Prompt sent to Chat. Paste the AI response back as your Story file, or use the auto-filled path below.', outputPath: storyOutputPath },
         });
 
       } catch (error: any) {

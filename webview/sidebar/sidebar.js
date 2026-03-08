@@ -13,7 +13,8 @@
   const generatePrdBtn = document.getElementById('generate-prd-btn');
   const selectStoryBtn = document.getElementById('select-story-btn');
   const storyFileInput = document.getElementById('story-file-input');
-  const step2Status = document.getElementById('step2-status');
+  const step1Status = document.getElementById('step1-status');
+  const step2Status = document.getElementById('step2-status'); // kept for compat
 
   // Step 3: TDS
   const generateTdsBtn = document.getElementById('generate-tds-btn');
@@ -271,7 +272,13 @@
         if (step === 'story') {
           generateStoryBtn.disabled = false;
           generateStoryBtn.textContent = '🚀 Generate Story Prompt';
-          step2Status.innerText = '✅ Story Prompt Ready';
+          step1Status.innerText = '✅ Story Prompt sent to Chat.';
+          // Auto-populate Step 2 with the saved story file path
+          if (msg.data.outputPath) {
+            storyFileInput.value = msg.data.outputPath;
+            generatePrdBtn.disabled = false;
+            step1Status.innerText = `✅ Story Prompt sent to Chat. Step 2 auto-filled.`;
+          }
         } else if (step === 'prd') {
           generatePrdBtn.disabled = false;
           generatePrdBtn.textContent = '🚀 Generate PRD Prompt';

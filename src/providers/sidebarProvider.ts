@@ -108,14 +108,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         </div>
 
         <button id="generate-story-btn" class="primary-btn">🚀 Generate Story Prompt</button>
+        <div id="step1-status" style="margin-top: 6px; font-size: 0.85em; color: var(--vscode-descriptionForeground);"></div>
       </div>
     </section>
 
     <!-- Step 2: PRD -->
     <section class="panel" id="step2-section">
-      <h3 class="panel-title" style="display:flex; justify-content:space-between">2️⃣ Generate PRD Prompt <span id="step2-status" style="font-size: 0.8em; font-weight: normal; color: var(--vscode-descriptionForeground)"></span></h3>
+      <h3 class="panel-title">2️⃣ Generate PRD Prompt</h3>
       <div class="input-group">
-        <label class="field-label">Select generated Story file:</label>
+        <label class="field-label">Select Story file (auto-filled or browse existing):</label>
         <div style="display:flex; gap: 8px;">
           <input type="text" id="story-file-input" readonly placeholder="No Story selected" style="flex:1">
           <button id="select-story-btn" class="secondary-btn" style="padding: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; cursor: pointer; border-radius: 2px;">Browse</button>
